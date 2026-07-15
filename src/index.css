@@ -1,0 +1,17 @@
+@import "tailwindcss";
+
+/* Habilitar modo oscuro manual mediante clase .dark en el tag html */
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  --color-primary: var(--app-primary, #06b6d4); /* Default cyan-500 */
+}
+
+:root {
+  --app-primary: #06b6d4;
+}
+
+/* Transición suave al cambiar de tema globalmente */
+html {
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
