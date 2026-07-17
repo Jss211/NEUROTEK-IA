@@ -115,25 +115,34 @@ export default function AdminLayout({ children }) {
 
   useEffect(() => {
     async function fetchNotifsCount() {
+      const readNotifs = JSON.parse(localStorage.getItem('readNotifs') || '[]')
+      
       // 1. Productos con bajo stock
       const { data: prods } = await supabase.from('productos').select('*').lte('stock', 10)
       let count = 0
       if (prods) {
         prods.forEach(p => {
-          if (p.stock <= p.stock_minimo) count++
+          if (p.stock <= p.stock_minimo && !readNotifs.includes(`stock-${p.id}`)) count++
         })
       }
       // 2. Últimas órdenes del día
       const today = new Date()
       today.setHours(0,0,0,0)
-      const { data: orders } = await supabase.from('ordenes').select('id').gte('fecha', today.toISOString())
+      const { data: orders } = await supabase.from('ordenes').select('id, estado').gte('fecha', today.toISOString())
       if (orders) {
-        count += orders.length
+        orders.forEach(o => {
+          if (o.estado !== 'Completada' && !readNotifs.includes(`ord-${o.id}`)) {
+            count++
+          }
+        })
       }
       setNotificaciones(count)
     }
 
     fetchNotifsCount()
+    
+    // Escuchar el evento personalizado de cuando se leen en Notificaciones.jsx
+    window.addEventListener('notifsUpdated', fetchNotifsCount)
 
     // Suscribirse a cambios en productos y ordenes para actualizar el badge
     const channel = supabase.channel('layout_notifs')
@@ -145,7 +154,10 @@ export default function AdminLayout({ children }) {
       })
       .subscribe()
 
-    return () => supabase.removeChannel(channel)
+    return () => {
+      window.removeEventListener('notifsUpdated', fetchNotifsCount)
+      supabase.removeChannel(channel)
+    }
   }, [])
   const handleLogout = async () => {
     setToast({ message: 'Cerrando sesión...', type: 'warning' })

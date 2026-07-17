@@ -48,12 +48,26 @@ export default function Reportes() {
 
   useEffect(() => {
     fetchReportData()
-  }, [])
+  }, [fecha])
 
   const fetchReportData = async () => {
     setLoading(true)
     try {
-      const { data: ordenes } = await supabase.from('ordenes').select('*').neq('estado', 'Cancelada')
+      // Calculate date range: first day of selected month to selected date
+      const selectedYear = fecha.getFullYear()
+      const selectedMonth = fecha.getMonth()
+      const selectedDay = fecha.getDate()
+
+      const startOfMonth = new Date(selectedYear, selectedMonth, 1)
+      startOfMonth.setHours(0, 0, 0, 0)
+      const isoStart = startOfMonth.toISOString()
+
+      const endOfDay = new Date(fecha)
+      endOfDay.setHours(23, 59, 59, 999)
+      const isoEnd = endOfDay.toISOString()
+
+      // Fetch orders within selected month up to selected day
+      const { data: ordenes } = await supabase.from('ordenes').select('*').neq('estado', 'Cancelada').gte('fecha', isoStart).lte('fecha', isoEnd)
       const { data: productos } = await supabase.from('productos').select('*')
       const { data: clientes } = await supabase.from('usuarios').select('*').eq('rol', 'cliente')
 
@@ -61,29 +75,36 @@ export default function Reportes() {
       const productosData = productos || []
       const clientesData = clientes || []
 
-      // 1. Resumen Global
+      // 1. Resumen Global (for the selected period)
       const ventasTotales = ordenesData.reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0)
       const totalProductos = ordenesData.reduce((sum, o) => sum + (parseInt(o.items) || 0), 0)
       setMetricasGlobales({ ventasTotales, totalProductos, totalClientes: clientesData.length })
 
-      // 2. Ventas vs Gastos (Agrupados por mes, asumiendo 70% de gasto como costo de mercancía)
-      const monthly = {}
+      // 2. Ventas vs Gastos DIARIOS (agrupados por día del mes seleccionado)
+      const daily = {}
+      // Pre-fill all days from 1 to selectedDay
+      for (let d = 1; d <= selectedDay; d++) {
+        const label = `${d}`
+        daily[label] = { mes: label, ventas: 0, gastos: 0 }
+      }
       ordenesData.forEach(o => {
         const d = new Date(o.fecha)
-        const month = d.toLocaleString('es-ES', { month: 'short' }).substring(0, 3)
-        if (!monthly[month]) monthly[month] = { mes: month, ventas: 0, gastos: 0 }
-        monthly[month].ventas += parseFloat(o.total) || 0
-        monthly[month].gastos += (parseFloat(o.total) || 0) * 0.7 
+        const dayNum = `${d.getDate()}`
+        if (daily[dayNum]) {
+          daily[dayNum].ventas += parseFloat(o.total) || 0
+          daily[dayNum].gastos += (parseFloat(o.total) || 0) * 0.7
+        }
       })
+
+      const sortedDaily = Object.values(daily).sort((a, b) => parseInt(a.mes) - parseInt(b.mes))
+      const arrDaily = sortedDaily.length > 0 ? sortedDaily : [{ mes: '1', ventas: 0, gastos: 0 }]
+      setVentasGastos(arrDaily)
       
-      const arrMonthly = Object.values(monthly).length > 0 ? Object.values(monthly) : [{mes: 'Act', ventas: 0, gastos: 0}]
-      setVentasGastos(arrMonthly)
-      
-      // 3. Tendencia de Ventas (Usamos los mismos datos de ventas mensuales para la tendencia)
-      const arrTendencia = arrMonthly.map(item => ({ mes: item.mes, ventas: item.ventas }))
+      // 3. Tendencia de Ventas (same daily data)
+      const arrTendencia = arrDaily.map(item => ({ mes: item.mes, ventas: item.ventas }))
       setTendenciaVentas(arrTendencia)
 
-      // 4. Distribución por Categoría (Porcentaje en base al inventario y precios)
+      // 4. Distribución por Categoría
       const catCount = {}
       let totalValorInventario = 0
       productosData.forEach(p => {
@@ -121,14 +142,14 @@ export default function Reportes() {
           {
             title: 'Resumen',
             lines: [
-              `Ventas Totales: $${metricasGlobales.ventasTotales.toLocaleString()}`,
+              `Ventas Totales: S/ ${metricasGlobales.ventasTotales.toLocaleString()}`,
               `Productos Vendidos (Items): ${metricasGlobales.totalProductos}`,
               `Clientes Registrados: ${metricasGlobales.totalClientes}`,
             ],
           },
           {
             title: 'Ventas vs Gastos (Est)',
-            lines: ventasGastos.map((item) => `${item.mes}: ventas $${item.ventas.toLocaleString()}, gastos $${item.gastos.toLocaleString()}`),
+            lines: ventasGastos.map((item) => `${item.mes}: ventas S/ ${item.ventas.toLocaleString()}, gastos S/ ${item.gastos.toLocaleString()}`),
           },
           {
             title: 'Distribucion por Categoria',
@@ -162,7 +183,7 @@ export default function Reportes() {
           <p className="text-slate-500 dark:text-gray-400 text-sm mt-1">Análisis y reportes detallados en tiempo real</p>
         </div>
         <div className="flex items-center gap-3">
-          <DatePicker date={fecha} onSelect={(d) => d && setFecha(d)} className="bg-white dark:bg-transparent" />
+          <DatePicker date={fecha} onDateChange={(d) => d && setFecha(d)} className="bg-white dark:bg-transparent" />
           <button
             onClick={handleExportarPDF}
             disabled={exportando}
@@ -213,8 +234,8 @@ export default function Reportes() {
               <BarChart data={ventasGastos}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" vertical={false} />
                 <XAxis dataKey="mes" stroke="#6b7280" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis stroke="#6b7280" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => `$${val/1000}k`} />
-                <Tooltip {...tooltipStyle} formatter={(val) => [`$${val.toLocaleString(undefined, {minimumFractionDigits: 2})}`, '']} />
+                <YAxis stroke="#6b7280" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => `S/ ${val/1000}k`} />
+                <Tooltip {...tooltipStyle} formatter={(val) => [`S/ ${val.toLocaleString(undefined, {minimumFractionDigits: 2})}`, '']} />
                 <Legend />
                 <Bar dataKey="ventas" name="Ventas Brutas" fill="#3b82f6" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="gastos" name="Costos Estimados" fill="#f43f5e" radius={[4, 4, 0, 0]} />
@@ -228,8 +249,8 @@ export default function Reportes() {
               <LineChart data={tendenciaVentas}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" vertical={false} />
                 <XAxis dataKey="mes" stroke="#6b7280" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis stroke="#6b7280" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => `$${val/1000}k`} />
-                <Tooltip {...tooltipStyle} formatter={(val) => [`$${val.toLocaleString(undefined, {minimumFractionDigits: 2})}`, 'Ventas']} />
+                <YAxis stroke="#6b7280" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => `S/ ${val/1000}k`} />
+                <Tooltip {...tooltipStyle} formatter={(val) => [`S/ ${val.toLocaleString(undefined, {minimumFractionDigits: 2})}`, 'Ventas']} />
                 <Line type="monotone" dataKey="ventas" stroke="#10b981" strokeWidth={3} dot={{ fill: '#10b981', strokeWidth: 2, r: 4 }} activeDot={{ r: 6 }} />
               </LineChart>
             </ResponsiveContainer>

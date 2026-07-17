@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import AdminLayout from '../../components/admin/AdminLayout'
 import { supabase } from '../../lib/supabase'
+import { useAuth } from '../../context/AuthContext'
 
 const estadoStyle = {
   Completada: 'bg-green-500/20 text-green-400 border border-green-500/30',
@@ -10,6 +11,7 @@ const estadoStyle = {
 }
 
 export default function Ordenes() {
+  const { user } = useAuth()
   const [filtro, setFiltro] = useState('')
   const [filtroEstado, setFiltroEstado] = useState('')
   const [detalleOrden, setDetalleOrden] = useState(null)
@@ -60,6 +62,10 @@ export default function Ordenes() {
   const pendientes = ordenes.filter(o => o.estado === 'Pendiente').length
 
   const cambiarEstado = async (id, nuevoEstado) => {
+    if (user?.email === 'demo@neurotek.com') {
+      window.alert('Acción deshabilitada en modo Demo (Solo Lectura).')
+      return
+    }
     setOrdenes(prev => prev.map(o => o.id === id ? { ...o, estado: nuevoEstado } : o))
     if (detalleOrden?.id === id) setDetalleOrden(prev => ({ ...prev, estado: nuevoEstado }))
     await supabase.from('ordenes').update({ estado: nuevoEstado }).eq('id', id)
@@ -97,7 +103,7 @@ export default function Ordenes() {
           <div>
             <p className="text-xs text-slate-500 dark:text-gray-400 uppercase tracking-wider mb-1">Ventas Hoy</p>
             <div className="flex items-baseline gap-2">
-              <p className="text-3xl font-bold text-slate-900 dark:text-white">${ventasHoy.toLocaleString()}</p>
+              <p className="text-3xl font-bold text-slate-900 dark:text-white">S/ {ventasHoy.toLocaleString()}</p>
               <span className="text-xs text-green-400 flex items-center gap-0.5">
                 <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
                 +23%
@@ -154,13 +160,13 @@ export default function Ordenes() {
           <select
             value={filtroEstado}
             onChange={e => setFiltroEstado(e.target.value)}
-            className="bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-gray-300 outline-none"
+            className="bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-600 dark:text-gray-300 outline-none cursor-pointer"
           >
-            <option value="">Todos los estados</option>
-            <option value="Completada">Completada</option>
-            <option value="Pendiente">Pendiente</option>
-            <option value="Procesando">Procesando</option>
-            <option value="Cancelada">Cancelada</option>
+            <option className="bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white" value="">Todos los estados</option>
+            <option className="bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white" value="Completada">Completada</option>
+            <option className="bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white" value="Pendiente">Pendiente</option>
+            <option className="bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white" value="Procesando">Procesando</option>
+            <option className="bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white" value="Cancelada">Cancelada</option>
           </select>
         </div>
 
@@ -169,13 +175,13 @@ export default function Ordenes() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-black/5 dark:border-white/5">
-                <th className="text-left px-5 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium">Orden</th>
-                <th className="text-left px-5 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium">Cliente</th>
-                <th className="text-left px-5 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium">Fecha</th>
-                <th className="text-left px-5 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium">Items</th>
-                <th className="text-left px-5 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium">Total</th>
-                <th className="text-left px-5 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium">Estado</th>
-                <th className="text-left px-5 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium">Acciones</th>
+                <th className="text-left px-5 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium w-[14%]">Orden</th>
+                <th className="text-left px-5 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium w-[22%]">Cliente</th>
+                <th className="text-center px-5 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium w-[16%]">Fecha</th>
+                <th className="text-center px-5 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium w-[10%]">Items</th>
+                <th className="text-center px-5 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium w-[16%]">Total</th>
+                <th className="text-center px-5 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium w-[14%]">Estado</th>
+                <th className="text-center px-5 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium w-[8%]">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
@@ -205,15 +211,15 @@ export default function Ordenes() {
                         <span className="text-slate-900 dark:text-white text-sm">{o.cliente_nombre || o.cliente}</span>
                       </div>
                     </td>
-                    <td className="px-5 py-4 text-slate-500 dark:text-gray-400 text-sm">{new Date(o.fecha).toLocaleDateString()}</td>
-                    <td className="px-5 py-4 text-gray-300 text-sm font-medium">{o.items}</td>
-                    <td className="px-5 py-4 text-slate-900 dark:text-white font-semibold text-sm">${(parseFloat(o.total) || 0).toFixed(2)}</td>
-                    <td className="px-5 py-4">
+                    <td className="px-5 py-4 text-center text-slate-500 dark:text-gray-400 text-sm">{new Date(o.fecha).toLocaleDateString()}</td>
+                    <td className="px-5 py-4 text-center text-gray-300 text-sm font-medium">{o.items}</td>
+                    <td className="px-5 py-4 text-center text-slate-900 dark:text-white font-semibold text-sm">S/ {(parseFloat(o.total) || 0).toFixed(2)}</td>
+                    <td className="px-5 py-4 text-center">
                       <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${estadoStyle[o.estado] || estadoStyle['Pendiente']}`}>
                         {o.estado}
                       </span>
                     </td>
-                    <td className="px-5 py-4">
+                    <td className="px-5 py-4 text-center">
                       <button
                         onClick={() => setDetalleOrden(o)}
                         className="text-primary/80 hover:text-blue-300 transition p-1"
@@ -296,7 +302,7 @@ export default function Ordenes() {
               {/* Total */}
               <div className="flex items-center justify-between bg-primary/10 border border-primary/20 rounded-xl px-4 py-3">
                 <span className="text-sm text-primary font-bold">Total de la orden</span>
-                <span className="text-xl font-bold text-slate-900 dark:text-white">${detalleOrden.total.toFixed(2)}</span>
+                <span className="text-xl font-bold text-slate-900 dark:text-white">S/ {detalleOrden.total.toFixed(2)}</span>
               </div>
 
               {/* Cambiar estado */}

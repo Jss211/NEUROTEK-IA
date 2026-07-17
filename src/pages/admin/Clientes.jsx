@@ -14,13 +14,18 @@ function Estrellas({ rating }) {
   )
 }
 
-function Avatar({ nombre, size = 'md' }) {
+function Avatar({ nombre, size = 'md', imagen = null }) {
   const iniciales = nombre.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
   const colores = ['bg-primary', 'bg-purple-500', 'bg-green-500', 'bg-orange-500', 'bg-pink-500', 'bg-teal-500']
   const color = colores[nombre.charCodeAt(0) % colores.length]
   const sz = size === 'sm' ? 'w-8 h-8 text-xs' : 'w-10 h-10 text-sm'
+  
+  if (imagen) {
+    return <img src={imagen} alt={nombre} className={`${sz} rounded-full object-cover shrink-0 ring-2 ring-primary/20`} />
+  }
+
   return (
-    <div className={`${sz} ${color} rounded-full flex items-center justify-center font-bold text-slate-900 dark:text-white shrink-0`}>
+    <div className={`${sz} ${color} rounded-full flex items-center justify-center font-bold text-slate-900 dark:text-white shrink-0 ring-2 ring-primary/20`}>
       {iniciales}
     </div>
   )
@@ -52,10 +57,11 @@ export default function Clientes() {
           
           return {
             id: u.id,
-            nombre: u.full_name || u.nombres || 'Cliente Nuevo',
+            nombre: u.nombre || u.full_name || u.nombres || 'Cliente Nuevo',
             email: u.email || 'Sin correo',
             telefono: u.telefono || u.phone || 'Sin teléfono',
-            ubicacion: u.ubicacion || 'No especificada',
+            ubicacion: u.ubicacion || u.ciudad || 'Lima, Perú',
+            imagen: u.avatar_url,
             ordenes: userOrders.length,
             total: totalSpent,
             rating: 5,
@@ -172,13 +178,13 @@ export default function Clientes() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-black/5 dark:border-white/5">
-                <th className="text-left px-5 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium">Cliente</th>
-                <th className="text-left px-5 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium">Contacto</th>
-                <th className="text-left px-5 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium">Ubicación</th>
-                <th className="text-left px-5 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium">Órdenes</th>
-                <th className="text-left px-5 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium">Total Gastado</th>
-                <th className="text-left px-5 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium">Rating</th>
-                <th className="text-left px-5 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium"></th>
+                <th className="text-center px-5 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium">Cliente</th>
+                <th className="text-center px-5 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium">Contacto</th>
+                <th className="text-center px-5 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium">Ubicación</th>
+                <th className="text-center px-5 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium">Órdenes</th>
+                <th className="text-center px-5 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium">Total Gastado</th>
+                <th className="text-center px-5 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium">Rating</th>
+                <th className="text-center px-5 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
@@ -199,9 +205,9 @@ export default function Clientes() {
                   <tr key={c.id} className="hover:bg-white/2 transition">
                     {/* Cliente */}
                     <td className="px-5 py-4">
-                    <div className="flex items-center gap-3">
-                      <Avatar nombre={c.nombre} />
-                      <div>
+                    <div className="flex items-center justify-center gap-3">
+                      <Avatar nombre={c.nombre} imagen={c.imagen} />
+                      <div className="text-left">
                         <div className="flex items-center gap-2">
                           <p className="text-slate-900 dark:text-white font-medium text-sm">{c.nombre}</p>
                           {c.vip && (
@@ -215,14 +221,14 @@ export default function Clientes() {
 
                   {/* Contacto */}
                   <td className="px-5 py-4">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-gray-400">
+                    <div className="space-y-1 flex flex-col items-center">
+                      <div className="flex items-center justify-center gap-1.5 text-xs text-slate-500 dark:text-gray-400">
                         <svg className="w-3 h-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                         </svg>
                         {c.email}
                       </div>
-                      <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-gray-400">
+                      <div className="flex items-center justify-center gap-1.5 text-xs text-slate-500 dark:text-gray-400">
                         <svg className="w-3 h-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                         </svg>
@@ -233,7 +239,7 @@ export default function Clientes() {
 
                   {/* Ubicación */}
                   <td className="px-5 py-4">
-                    <div className="flex items-center gap-1.5 text-slate-500 dark:text-gray-400 text-sm">
+                    <div className="flex items-center justify-center gap-1.5 text-slate-500 dark:text-gray-400 text-sm">
                       <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -243,16 +249,18 @@ export default function Clientes() {
                   </td>
 
                   {/* Órdenes */}
-                  <td className="px-5 py-4 text-slate-900 dark:text-white font-semibold text-sm">{c.ordenes}</td>
+                  <td className="px-5 py-4 text-center text-slate-900 dark:text-white font-semibold text-sm">{c.ordenes}</td>
 
                   {/* Total gastado */}
-                  <td className="px-5 py-4 text-green-400 font-semibold text-sm">
-                    ${c.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                  <td className="px-5 py-4 text-center text-green-400 font-semibold text-sm">
+                    S/ {c.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                   </td>
 
                   {/* Rating */}
                   <td className="px-5 py-4">
-                    <Estrellas rating={c.rating} />
+                    <div className="flex justify-center">
+                      <Estrellas rating={c.rating} />
+                    </div>
                   </td>
 
                   {/* Acciones */}

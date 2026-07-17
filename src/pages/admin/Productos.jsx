@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import AdminLayout from '../../components/admin/AdminLayout'
 import { supabase } from '../../lib/supabase'
+import { useAuth } from '../../context/AuthContext'
 
-const CATEGORIAS = ['Periféricos', 'Computadoras', 'Audio', 'Monitores', 'Accesorios', 'Redes', 'Almacenamiento']
+const CATEGORIAS = ['Periféricos', 'Computadoras', 'Audio', 'Monitores', 'Accesorios', 'Redes', 'Almacenamiento', 'Case', 'PC Completa', 'Disco SSD', 'Estabilizador', 'Fuente de Poder', 'Memoria RAM', 'Placa Madre', 'Tarjetas de Video']
 
 const FORM_VACIO = {
   nombre: '', descripcion: '', precio: '', stock: '',
@@ -10,6 +11,7 @@ const FORM_VACIO = {
 }
 
 export default function Productos() {
+  const { user } = useAuth()
   const [productos, setProductos] = useState([])
   const [loading, setLoading] = useState(true)
   const [modalAbierto, setModalAbierto] = useState(false)
@@ -96,6 +98,10 @@ export default function Productos() {
   const handleGuardar = async (e) => {
     e.preventDefault()
     setError('')
+    if (user?.email === 'demo@neurotek.com') {
+      setError('Acción deshabilitada en modo Demo (Solo Lectura).')
+      return
+    }
     if (!form.nombre || !form.precio) {
       setError('El nombre y el precio son obligatorios.')
       return
@@ -132,6 +138,10 @@ export default function Productos() {
   }
 
   const handleEliminar = async (id) => {
+    if (user?.email === 'demo@neurotek.com') {
+      window.alert('Acción deshabilitada en modo Demo (Solo Lectura).')
+      return
+    }
     setEliminando(id)
     await supabase.from('productos').delete().eq('id', id)
     await cargarProductos()
@@ -139,6 +149,10 @@ export default function Productos() {
   }
 
   const toggleActivo = async (id, activo) => {
+    if (user?.email === 'demo@neurotek.com') {
+      window.alert('Acción deshabilitada en modo Demo (Solo Lectura).')
+      return
+    }
     await supabase.from('productos').update({ activo: !activo }).eq('id', id)
     await cargarProductos()
   }
@@ -149,6 +163,8 @@ export default function Productos() {
     const matchCat = categoriaFiltro ? p.categoria === categoriaFiltro : true
     return matchTexto && matchCat
   })
+
+  const categoriasDisponibles = Array.from(new Set(productos.map(p => p.categoria).filter(Boolean)))
 
   return (
     <AdminLayout>
@@ -186,10 +202,12 @@ export default function Productos() {
         <select
           value={categoriaFiltro}
           onChange={e => setCategoriaFiltro(e.target.value)}
-          className="bg-white dark:bg-[#1a1d2e] border border-black/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-600 dark:text-gray-300 outline-none"
+          className="bg-white dark:bg-[#1a1d2e] border border-black/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-600 dark:text-gray-300 outline-none cursor-pointer"
         >
-          <option value="">Todas las categorías</option>
-          {CATEGORIAS.map(c => <option key={c} value={c}>{c}</option>)}
+          <option className="bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white" value="">Todas las categorías</option>
+          {categoriasDisponibles.map(c => (
+            <option className="bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white" key={c} value={c}>{c}</option>
+          ))}
         </select>
       </div>
 
@@ -242,7 +260,7 @@ export default function Productos() {
                 {p.descripcion && <p className="text-xs text-gray-500 mb-3 line-clamp-2">{p.descripcion}</p>}
 
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-xl font-bold text-slate-900 dark:text-white">${parseFloat(p.precio).toFixed(2)}</span>
+                  <span className="text-xl font-bold text-slate-900 dark:text-white">S/ {parseFloat(p.precio).toFixed(2)}</span>
                   <span className={`text-xs px-2 py-1 rounded-lg ${p.stock <= 5 ? 'bg-red-500/20 text-red-400' : 'bg-black/5 dark:bg-white/5 text-slate-500 dark:text-gray-400'}`}>
                     Stock: {p.stock}
                   </span>
@@ -344,7 +362,7 @@ export default function Productos() {
                 <div className="bg-primary/10 border border-primary/20 rounded-xl p-4 space-y-2">
                   <div className="flex items-baseline gap-2">
                     <span className="text-sm text-primary/80 font-medium">Precio:</span>
-                    <span className="text-2xl font-bold text-slate-900 dark:text-white">${parseFloat(detalleProducto.precio || 0).toFixed(2)}</span>
+                    <span className="text-2xl font-bold text-slate-900 dark:text-white">S/ {parseFloat(detalleProducto.precio || 0).toFixed(2)}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-primary/80 font-medium">Disponibilidad:</span>

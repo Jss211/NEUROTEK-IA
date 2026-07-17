@@ -79,7 +79,7 @@ export default function AdminDashboard() {
       const newStats = [
         {
           label: 'Ventas Totales',
-          value: `$${ventasTotales.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+          value: `S/ ${ventasTotales.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
           change: '+Realtime',
           positive: true,
           icon: (
@@ -137,7 +137,7 @@ export default function AdminDashboard() {
         id: o.id.toString().substring(0,8),
         cliente: o.cliente_nombre || o.cliente,
         producto: o.items + ' items',
-        monto: `$${(parseFloat(o.total) || 0).toFixed(2)}`,
+        monto: `S/ ${(parseFloat(o.total) || 0).toFixed(2)}`,
         estado: o.estado
       }))
       setUltimosPedidos(recentOrders)
@@ -147,7 +147,7 @@ export default function AdminDashboard() {
         producto: `Orden #${o.id.toString().substring(0,8)}`,
         tipo: 'Venta',
         tiempo: new Date(o.fecha).toLocaleDateString(),
-        monto: `$${parseFloat(o.total).toFixed(2)}`,
+        monto: `S/ ${parseFloat(o.total).toFixed(2)}`,
         unidades: `${o.items} items`
       }))
       setActividadReciente(actividades)
@@ -261,10 +261,10 @@ export default function AdminDashboard() {
               <YAxis tick={{ fill: '#6b7280', fontSize: 12 }} axisLine={false} tickLine={false} />
               <Tooltip
                 contentStyle={{ backgroundColor: '#1a1d2e', border: '1px solid #ffffff10', borderRadius: '8px', color: '#fff' }}
-                formatter={(val) => [`$${val.toLocaleString(undefined, {minimumFractionDigits: 2})}`, '']}
+                formatter={(val) => [`S/ ${val.toLocaleString(undefined, {minimumFractionDigits: 2})}`, '']}
               />
-              <Area type="monotone" dataKey="ventas"    stroke="#3b82f6" strokeWidth={2} fill="url(#ventas)"    name="Ventas" />
-              <Area type="monotone" dataKey="ganancias" stroke="#60a5fa" strokeWidth={2} fill="url(#ganancias)" name="Ganancias" />
+              <Area type="monotone" dataKey="ventas"    stroke="#3b82f6" strokeWidth={2} fill="url(#ventas)"    name="Ventas" isAnimationActive={true} animationDuration={1500} animationBegin={300} animationEasing="ease-out" />
+              <Area type="monotone" dataKey="ganancias" stroke="#60a5fa" strokeWidth={2} fill="url(#ganancias)" name="Ganancias" isAnimationActive={true} animationDuration={1500} animationBegin={500} animationEasing="ease-out" />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -275,7 +275,7 @@ export default function AdminDashboard() {
           <p className="text-xs text-gray-500 mb-4">Distribución en stock</p>
           <ResponsiveContainer width="100%" height={160}>
             <PieChart>
-              <Pie data={categorias} cx="50%" cy="50%" innerRadius={45} outerRadius={70} dataKey="value" paddingAngle={3}>
+              <Pie data={categorias} cx="50%" cy="50%" innerRadius={45} outerRadius={70} dataKey="value" paddingAngle={3} isAnimationActive={true} animationDuration={1500} animationBegin={400} animationEasing="ease-out">
                 {categorias.map((entry, i) => (
                   <Cell key={i} fill={entry.color} />
                 ))}
@@ -312,11 +312,11 @@ export default function AdminDashboard() {
           <table className="w-full text-sm">
             <thead>
               <tr className="text-gray-500 text-xs uppercase border-b border-black/5 dark:border-white/5">
-                <th className="pb-3 text-left">ID</th>
-                <th className="pb-3 text-left">Cliente</th>
-                <th className="pb-3 text-left">Items</th>
-                <th className="pb-3 text-left">Monto</th>
-                <th className="pb-3 text-left">Estado</th>
+                <th className="pb-3 text-left w-[15%]">ID</th>
+                <th className="pb-3 text-center w-[30%]">Cliente</th>
+                <th className="pb-3 text-center w-[20%]">Items</th>
+                <th className="pb-3 text-center w-[20%]">Monto</th>
+                <th className="pb-3 text-center w-[15%]">Estado</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
@@ -326,11 +326,11 @@ export default function AdminDashboard() {
                  </tr>
               ) : ultimosPedidos.map((p) => (
                 <tr key={p.id} className="hover:bg-white/2 transition">
-                  <td className="py-3 text-slate-500 dark:text-gray-400 font-mono">#{p.id}</td>
-                  <td className="py-3 text-slate-900 dark:text-white">{p.cliente}</td>
-                  <td className="py-3 text-slate-600 dark:text-gray-300">{p.producto}</td>
-                  <td className="py-3 text-slate-900 dark:text-white font-medium">{p.monto}</td>
-                  <td className="py-3">
+                  <td className="py-3 text-left text-slate-500 dark:text-gray-400 font-mono">#{p.id}</td>
+                  <td className="py-3 text-center text-slate-900 dark:text-white">{p.cliente}</td>
+                  <td className="py-3 text-center text-slate-600 dark:text-gray-300">{p.producto}</td>
+                  <td className="py-3 text-center text-slate-900 dark:text-white font-medium">{p.monto}</td>
+                  <td className="py-3 text-center">
                     <span className={`px-2 py-1 rounded-md text-xs font-medium ${estadoColor[p.estado] || estadoColor['Pendiente']}`}>
                       {p.estado}
                     </span>

@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import AdminLayout from '../../components/admin/AdminLayout';
 import { supabase } from '../../lib/supabase';
 import Toast from '../../components/Toast';
+import { useAuth } from '../../context/AuthContext';
 
 export default function Equipo() {
+  const { user } = useAuth()
   const [miembros, setMiembros] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -21,8 +23,10 @@ export default function Equipo() {
 
         if (error) throw error;
         
-        // Agregar propiedades computadas para la vista
-        const formattedData = (data || []).map(u => {
+        // Filtrar clientes (solo queremos equipo) y mapear datos
+        const teamData = (data || []).filter(u => u.rol !== 'cliente');
+        
+        const formattedData = teamData.map(u => {
           const iniciales = (u.nombre || u.email || '?')
             .split(' ')
             .map(n => n[0])
@@ -33,14 +37,15 @@ export default function Equipo() {
           let color = 'bg-slate-500';
           if (u.rol === 'admin') color = 'bg-primary';
           if (u.rol === 'vendedor') color = 'bg-cyan-500';
-          if (u.rol === 'cliente') color = 'bg-indigo-500';
 
           return {
             ...u,
             iniciales,
             color,
             departamento: u.departamento || 'Sin asignar',
-            telefono: u.telefono || 'Sin teléfono'
+            telefono: u.telefono || 'Sin teléfono',
+            estado: u.email === user?.email ? 'En línea' : 'Desconectado',
+            fechaIngreso: u.created_at ? new Date(u.created_at).toLocaleDateString() : 'Desconocida'
           };
         });
 
@@ -57,6 +62,10 @@ export default function Equipo() {
 
   const handleInvite = (e) => {
     e.preventDefault();
+    if (user?.email === 'demo@neurotek.com') {
+      setToast({ message: 'Acción deshabilitada en modo Demo (Solo Lectura).', type: 'error' });
+      return;
+    }
     if (!inviteEmail) return;
     setToast({ message: 'Enviando invitación...', type: 'warning' });
     setTimeout(() => {
@@ -68,7 +77,7 @@ export default function Equipo() {
 
   const totalMiembros = miembros.length;
   const totalAdmins = miembros.filter(m => m.rol === 'admin').length;
-  const totalActivos = miembros.filter(m => m.estado === 'Activo').length;
+  const totalActivos = miembros.filter(m => m.estado === 'En línea').length;
 
   return (
     <AdminLayout>
@@ -152,7 +161,6 @@ export default function Equipo() {
                   <th className="px-6 py-4 font-medium">Rol</th>
                   <th className="px-6 py-4 font-medium">Estado</th>
                   <th className="px-6 py-4 font-medium">Fecha Ingreso</th>
-                  <th className="px-6 py-4 font-medium text-center">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-700/50">
@@ -190,7 +198,7 @@ export default function Equipo() {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      {miembro.rol === 'Admin' && (
+                      {miembro.rol === 'admin' && (
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-amber-500/10 text-amber-500 border border-amber-500/20">
                           <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M10 2a1 1 0 011 1v1.323l3.954 1.582 1.599-.8a1 1 0 01.894 1.79l-1.233.616 1.738 5.42a1 1 0 01-.285 1.05A3.989 3.989 0 0115 15a3.984 3.984 0 01-2.677-1.031l-1.079.27a5 5 0 00-2.244 0l-1.079-.27A3.984 3.984 0 015 15a3.989 3.989 0 01-2.667-1.019 1 1 0 01-.285-1.05l1.738-5.42-1.233-.617a1 1 0 01.894-1.788l1.599.799L9 4.323V3a1 1 0 011-1z" clipRule="evenodd" />
@@ -198,36 +206,30 @@ export default function Equipo() {
                           Admin
                         </span>
                       )}
-                      {miembro.rol === 'Manager' && (
+                      {miembro.rol === 'vendedor' && (
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-cyan-500/10 text-cyan-500 border border-cyan-500/20">
                           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                           </svg>
-                          Manager
+                          Vendedor
                         </span>
                       )}
-                      {miembro.rol === 'Usuario' && (
+                      {miembro.rol === 'cliente' && (
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-slate-500/10 text-slate-400 dark:text-slate-500 dark:text-slate-400 border border-slate-500/20">
                           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                           </svg>
-                          Usuario
+                          Cliente
                         </span>
                       )}
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${miembro.estado === 'Activo' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-slate-600/30 text-slate-400 dark:text-slate-500 dark:text-slate-400'}`}>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${miembro.estado === 'En línea' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-slate-600/30 text-slate-400 dark:text-slate-500 dark:text-slate-400'}`}>
+                        {miembro.estado === 'En línea' && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5 animate-pulse"></span>}
                         {miembro.estado}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-slate-400 dark:text-slate-500 dark:text-slate-400">{miembro.fechaIngreso}</td>
-                    <td className="px-6 py-4 text-center">
-                      <button className="text-slate-400 dark:text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-white transition-colors">
-                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                          <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-                        </svg>
-                      </button>
-                    </td>
                   </tr>
                 ))}
               </tbody>

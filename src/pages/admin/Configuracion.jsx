@@ -5,7 +5,7 @@ import { supabase } from '../../lib/supabase';
 import Toast from '../../components/Toast';
 import { ColorSwatchPicker } from '../../components/ui/heroui-color-swatch-picker';
 
-const availableColors = ["#00f3ff", "#ff00ff", "#00ff00", "#ff5e00", "#ccff00", "#ffffff", "#06b6d4", "#F43F5E"];
+const availableColors = ["#2962FF", "#b026ff", "#00E676", "#FFD600", "#ccff00", "#FF3D00", "#6200EA", "#00E5FF"];
 
 export default function Configuracion() {
   const { user } = useAuth();
@@ -14,7 +14,7 @@ export default function Configuracion() {
   const [toast, setToast] = useState(null);
   
   // Theme state
-  const [primaryColor, setPrimaryColor] = useState(localStorage.getItem('app-primary-color') || '#00f3ff');
+  const [primaryColor, setPrimaryColor] = useState(localStorage.getItem('app-primary-color') || '#2962FF');
   
   useEffect(() => {
     document.documentElement.style.setProperty('--app-primary', primaryColor);
@@ -46,7 +46,7 @@ export default function Configuracion() {
     tema: localStorage.getItem('app-theme') || 'Oscuro',
     idioma: localStorage.getItem('app-lang') || 'Español',
     zonaHoraria: 'Eastern Time (ET)',
-    moneda: 'USD ($)',
+    moneda: 'PEN (S/)',
     modoCompacto: false,
   });
 
@@ -112,6 +112,10 @@ export default function Configuracion() {
   };
 
   const handleGuardarCambios = async () => {
+    if (user?.email === 'demo@neurotek.com') {
+      setToast({ message: 'Acción deshabilitada en modo Demo (Solo Lectura).', type: 'error' });
+      return;
+    }
     try {
       setToast({ message: 'Guardando datos...', type: 'warning' });
       const fullName = `${perfilForm.nombre} ${perfilForm.apellido}`.trim();
@@ -680,7 +684,7 @@ export default function Configuracion() {
                       value={aparienciaSettings.moneda}
                       onChange={(e) => setAparienciaSettings({...aparienciaSettings, moneda: e.target.value})}
                     >
-                      <option className="bg-slate-100 dark:bg-slate-800">USD ($)</option>
+                      <option className="bg-slate-100 dark:bg-slate-800">PEN (S/)</option>
                       <option className="bg-slate-100 dark:bg-slate-800">EUR (€)</option>
                       <option className="bg-slate-100 dark:bg-slate-800">MXN ($)</option>
                     </select>

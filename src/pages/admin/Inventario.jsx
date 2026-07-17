@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import AdminLayout from '../../components/admin/AdminLayout'
 import { supabase } from '../../lib/supabase'
+import { useAuth } from '../../context/AuthContext'
 import * as XLSX from 'xlsx'
 
 function getEstado(stock, stockMinimo) {
@@ -18,6 +19,7 @@ const estadoStyle = {
 }
 
 export default function Inventario() {
+  const { user } = useAuth()
   const [productos, setProductos] = useState([])
   const [loading, setLoading] = useState(true)
   const [filtro, setFiltro] = useState('')
@@ -80,6 +82,10 @@ export default function Inventario() {
   }
 
   const handleActualizarStock = async (id) => {
+    if (user?.email === 'demo@neurotek.com') {
+      window.alert('Acción deshabilitada en modo Demo (Solo Lectura).')
+      return
+    }
     if (nuevoStock === '') return
     await supabase
       .from('productos')

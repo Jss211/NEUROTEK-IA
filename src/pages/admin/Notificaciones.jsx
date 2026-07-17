@@ -28,6 +28,9 @@ export default function Notificaciones() {
       setLoading(true)
       const alerts = []
       
+      // Leer notificaciones ya vistas
+      const readNotifs = JSON.parse(localStorage.getItem('readNotifs') || '[]')
+      
       // 1. Productos con bajo stock
       const { data: prods } = await supabase.from('productos').select('*').lte('stock', 10) // Umbral general
       if (prods) {
@@ -39,7 +42,7 @@ export default function Notificaciones() {
               titulo: p.stock === 0 ? 'Sin stock' : 'Stock bajo',
               texto: `${p.nombre}: solo quedan ${p.stock} unidades`,
               tiempo: 'Actual',
-              leida: false,
+              leida: readNotifs.includes(`stock-${p.id}`),
               critica: p.stock === 0,
               iconBg: p.stock === 0 ? 'bg-red-500/15' : 'bg-orange-500/15',
               iconColor: p.stock === 0 ? 'text-red-400' : 'text-orange-400',
@@ -60,9 +63,9 @@ export default function Notificaciones() {
             id: `ord-${o.id}`,
             tipo: 'orden',
             titulo: o.estado === 'Completada' ? 'Orden completada' : 'Nueva orden',
-            texto: `${o.cliente_nombre || o.cliente} realizó una orden de $${parseFloat(o.total).toFixed(2)}`,
+            texto: `${o.cliente_nombre || o.cliente} realizó una orden de S/ ${parseFloat(o.total).toFixed(2)}`,
             tiempo: new Date(o.fecha).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
-            leida: o.estado === 'Completada',
+            leida: o.estado === 'Completada' || readNotifs.includes(`ord-${o.id}`),
             critica: false,
             iconBg: 'bg-green-500/15',
             iconColor: 'text-green-400',
@@ -88,7 +91,7 @@ export default function Notificaciones() {
           id: `ord-${o.id}-${Date.now()}`,
           tipo: 'orden',
           titulo: '¡Nueva orden en tiempo real!',
-          texto: `${o.cliente_nombre || o.cliente} realizó una orden de $${parseFloat(o.total).toFixed(2)}`,
+          texto: `${o.cliente_nombre || o.cliente} realizó una orden de S/ ${parseFloat(o.total).toFixed(2)}`,
           tiempo: 'Justo ahora',
           leida: false,
           critica: false,
@@ -127,18 +130,46 @@ export default function Notificaciones() {
 
   const marcarLeida = (id) => {
     setNotifs(prev => prev.map(n => n.id === id ? { ...n, leida: true } : n))
+    const read = JSON.parse(localStorage.getItem('readNotifs') || '[]')
+    if (!read.includes(id)) {
+      read.push(id)
+      localStorage.setItem('readNotifs', JSON.stringify(read))
+      window.dispatchEvent(new Event('notifsUpdated'))
+    }
   }
 
   const marcarTodas = () => {
-    setNotifs(prev => prev.map(n => ({ ...n, leida: true })))
+    setNotifs(prev => {
+      const read = JSON.parse(localStorage.getItem('readNotifs') || '[]')
+      prev.forEach(n => {
+        if (!read.includes(n.id)) read.push(n.id)
+      })
+      localStorage.setItem('readNotifs', JSON.stringify(read))
+      window.dispatchEvent(new Event('notifsUpdated'))
+      return prev.map(n => ({ ...n, leida: true }))
+    })
   }
 
   const limpiar = () => {
-    setNotifs([])
+    setNotifs(prev => {
+      const read = JSON.parse(localStorage.getItem('readNotifs') || '[]')
+      prev.forEach(n => {
+        if (!read.includes(n.id)) read.push(n.id)
+      })
+      localStorage.setItem('readNotifs', JSON.stringify(read))
+      window.dispatchEvent(new Event('notifsUpdated'))
+      return []
+    })
   }
 
   const eliminar = (id) => {
     setNotifs(prev => prev.filter(n => n.id !== id))
+    const read = JSON.parse(localStorage.getItem('readNotifs') || '[]')
+    if (!read.includes(id)) {
+      read.push(id)
+      localStorage.setItem('readNotifs', JSON.stringify(read))
+      window.dispatchEvent(new Event('notifsUpdated'))
+    }
   }
 
   if (loading) {

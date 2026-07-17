@@ -41,20 +41,29 @@ export default function Analytics() {
   const fetchAnalyticsData = async () => {
     setLoading(true)
     try {
-      // Set end of day for the selected date to include everything up to that day
-      const endOfDay = new Date(fecha);
-      endOfDay.setHours(23, 59, 59, 999);
-      const isoDate = endOfDay.toISOString();
+      // Calculate date range: first day of selected month to selected date
+      const selectedYear = fecha.getFullYear()
+      const selectedMonth = fecha.getMonth()
+      const selectedDay = fecha.getDate()
 
-      const { data: ordenes } = await supabase.from('ordenes').select('*').neq('estado', 'Cancelada').lte('fecha', isoDate)
-      const { data: productos } = await supabase.from('productos').select('*').lte('created_at', isoDate)
-      const { data: clientes } = await supabase.from('usuarios').select('*').eq('rol', 'cliente').lte('fecha_ingreso', isoDate)
+      const startOfMonth = new Date(selectedYear, selectedMonth, 1)
+      startOfMonth.setHours(0, 0, 0, 0)
+      const isoStart = startOfMonth.toISOString()
+
+      const endOfDay = new Date(fecha)
+      endOfDay.setHours(23, 59, 59, 999)
+      const isoEnd = endOfDay.toISOString()
+
+      // Fetch orders only within the selected month up to the selected day
+      const { data: ordenes } = await supabase.from('ordenes').select('*').neq('estado', 'Cancelada').gte('fecha', isoStart).lte('fecha', isoEnd)
+      const { data: productos } = await supabase.from('productos').select('*')
+      const { data: clientes } = await supabase.from('usuarios').select('*').eq('rol', 'cliente')
 
       const ordenesData = ordenes || []
       const productosData = productos || []
       const clientesData = clientes || []
 
-      // Metricas globales
+      // Metricas globales (for the selected period)
       const ventasTotales = ordenesData.reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0)
       setMetricasGlobales({
         ventasTotales,
@@ -62,37 +71,58 @@ export default function Analytics() {
         totalClientes: clientesData.length
       })
 
-      // 1. Ventas Mensuales (agrupando por mes)
-      const monthly = {}
+      // 1. Ventas DIARIAS dentro del mes seleccionado (agrupando por día)
+      const daily = {}
+      // Pre-fill all days from 1 to selectedDay so the chart shows even empty days
+      for (let d = 1; d <= selectedDay; d++) {
+        const label = `${d}`
+        daily[label] = { mes: label, ventas: 0, pedidos: 0, clientes: 0 }
+      }
       ordenesData.forEach(o => {
         const d = new Date(o.fecha)
-        const month = d.toLocaleString('es-ES', { month: 'short' }).substring(0, 3)
-        if (!monthly[month]) monthly[month] = { mes: month, ventas: 0, pedidos: 0, clientes: 0 }
-        monthly[month].ventas += parseFloat(o.total) || 0
-        monthly[month].pedidos += 1
+        const dayNum = `${d.getDate()}`
+        if (daily[dayNum]) {
+          daily[dayNum].ventas += parseFloat(o.total) || 0
+          daily[dayNum].pedidos += 1
+        }
       })
-      // Simular clientes únicos por mes (aproximado usando Set si iteramos usuarios reales)
+      // Approximate unique clients per day
+      const clientesPorDia = {}
       ordenesData.forEach(o => {
         const d = new Date(o.fecha)
-        const month = d.toLocaleString('es-ES', { month: 'short' }).substring(0, 3)
-        // Solo para llenar el dato visualmente sin cruce complejo
-        monthly[month].clientes = Math.ceil(monthly[month].pedidos * 0.8) 
+        const dayNum = `${d.getDate()}`
+        if (!clientesPorDia[dayNum]) clientesPorDia[dayNum] = new Set()
+        clientesPorDia[dayNum].add(o.cliente || o.cliente_nombre || o.user_id)
       })
-      setVentasMensuales(Object.values(monthly).length > 0 ? Object.values(monthly) : [{mes: 'Actual', ventas: 0, pedidos: 0, clientes: 0}])
+      Object.keys(clientesPorDia).forEach(day => {
+        if (daily[day]) daily[day].clientes = clientesPorDia[day].size
+      })
 
-      // 2. Productos mas vendidos (simulado con el campo items de la orden)
-      // Como no tenemos tabla intermedia detalle_orden estructurada para group by, lo simulamos
-      // usando los nombres de items si los guardaste como json o un count base.
-      // Para este MVP mostraremos los productos reales en inventario ordenados por precio o random para llenar la tabla
-      // En una BD real, haríamos un join con detalle_orden.
-      const topProductos = productosData.slice(0, 6).map(p => ({
-        nombre: p.nombre,
-        unidades: Math.floor(Math.random() * 50) + 10, // Simulado basado en el stock restado
-        ingresos: (parseFloat(p.precio) || 0) * (Math.floor(Math.random() * 50) + 10)
-      })).sort((a,b) => b.ingresos - a.ingresos)
+      const sortedDaily = Object.values(daily).sort((a, b) => parseInt(a.mes) - parseInt(b.mes))
+      setVentasMensuales(sortedDaily.length > 0 ? sortedDaily : [{ mes: '1', ventas: 0, pedidos: 0, clientes: 0 }])
+
+      // 2. Productos mas vendidos (based on orders in selected period)
+      const productoConteo = {}
+      ordenesData.forEach(o => {
+        const nombre = o.producto_nombre || o.items_detalle || null
+        if (nombre) {
+          if (!productoConteo[nombre]) productoConteo[nombre] = { nombre, unidades: 0, ingresos: 0 }
+          productoConteo[nombre].unidades += parseInt(o.items) || 1
+          productoConteo[nombre].ingresos += parseFloat(o.total) || 0
+        }
+      })
+      let topProductos = Object.values(productoConteo).sort((a, b) => b.ingresos - a.ingresos).slice(0, 6)
+      // Fallback if no structured product data in orders
+      if (topProductos.length === 0) {
+        topProductos = productosData.slice(0, 6).map(p => ({
+          nombre: p.nombre,
+          unidades: parseInt(p.stock) || 0,
+          ingresos: (parseFloat(p.precio) || 0) * (parseInt(p.stock) || 1)
+        })).sort((a, b) => b.ingresos - a.ingresos)
+      }
       setProductosMasVendidos(topProductos)
 
-      // 3. Por horario
+      // 3. Por horario (orders in selected period)
       const horarioMap = { '00:00': 0, '04:00': 0, '08:00': 0, '12:00': 0, '16:00': 0, '20:00': 0, '23:00': 0 }
       ordenesData.forEach(o => {
         const hour = new Date(o.fecha).getHours()
@@ -108,15 +138,27 @@ export default function Analytics() {
       const horarioArr = Object.keys(horarioMap).map(k => ({ hora: k, ventas: horarioMap[k] }))
       setPorHorario(horarioArr)
 
-      // 4. Categoría Data (basado en el inventario real o ventas estimadas)
+      // 4. Categoría Data (based on orders in selected period)
       const catCount = {}
-      productosData.forEach(p => {
-        const cat = p.categoria || 'Otros'
+      ordenesData.forEach(o => {
+        const cat = o.categoria || 'Otros'
         if (!catCount[cat]) catCount[cat] = { cat, ventas: 0, pedidos: 0 }
         catCount[cat].pedidos += 1
-        catCount[cat].ventas += parseFloat(p.precio) * 2 || 0 // Estimacion
+        catCount[cat].ventas += parseFloat(o.total) || 0
       })
-      setCategoriaData(Object.values(catCount).length > 0 ? Object.values(catCount) : [{cat: 'Varios', ventas: 0, pedidos: 0}])
+      // Fallback to product categories if orders don't have category field
+      if (Object.keys(catCount).length === 0 || (Object.keys(catCount).length === 1 && catCount['Otros'])) {
+        const catFromProducts = {}
+        productosData.forEach(p => {
+          const cat = p.categoria || 'Otros'
+          if (!catFromProducts[cat]) catFromProducts[cat] = { cat, ventas: 0, pedidos: 0 }
+          catFromProducts[cat].pedidos += 1
+          catFromProducts[cat].ventas += parseFloat(p.precio) * 2 || 0
+        })
+        setCategoriaData(Object.values(catFromProducts).length > 0 ? Object.values(catFromProducts) : [{ cat: 'Varios', ventas: 0, pedidos: 0 }])
+      } else {
+        setCategoriaData(Object.values(catCount))
+      }
 
     } catch (error) {
       console.error(error)
@@ -136,18 +178,18 @@ export default function Analytics() {
           {
             title: 'Metricas Globales',
             lines: [
-              `Ventas Totales: $${metricasGlobales.ventasTotales.toLocaleString()}`,
+              `Ventas Totales: S/ ${metricasGlobales.ventasTotales.toLocaleString()}`,
               `Total Pedidos: ${metricasGlobales.totalPedidos}`,
               `Total Clientes: ${metricasGlobales.totalClientes}`,
             ],
           },
           {
             title: 'Ventas mensuales',
-            lines: ventasMensuales.map((item) => `${item.mes}: ventas $${item.ventas.toLocaleString()}, pedidos ${item.pedidos}, clientes ${item.clientes}`),
+            lines: ventasMensuales.map((item) => `${item.mes}: ventas S/ ${item.ventas.toLocaleString()}, pedidos ${item.pedidos}, clientes ${item.clientes}`),
           },
           {
             title: 'Productos mas vendidos',
-            lines: productosMasVendidos.map((item) => `${item.nombre}: ${item.unidades} unidades, $${item.ingresos.toLocaleString()} ingresos`),
+            lines: productosMasVendidos.map((item) => `${item.nombre}: ${item.unidades} unidades, S/ ${item.ingresos.toLocaleString()} ingresos`),
           },
         ],
       })
@@ -176,7 +218,7 @@ export default function Analytics() {
           <p className="text-slate-500 dark:text-gray-400 text-sm mt-1">Análisis detallado de rendimiento y métricas</p>
         </div>
         <div className="flex items-center gap-3">
-          <DatePicker date={fecha} onSelect={(d) => d && setFecha(d)} className="bg-white dark:bg-transparent" />
+          <DatePicker date={fecha} onDateChange={(d) => d && setFecha(d)} className="bg-white dark:bg-transparent" />
           <button
             onClick={handleExportarPDF}
             disabled={exportando}
@@ -219,7 +261,8 @@ export default function Analytics() {
         {tabActiva === 'Ingresos' && (
           <div className="grid grid-cols-1 gap-6">
             <div className="bg-white dark:bg-[#1a1d2e] border border-black/5 dark:border-white/5 rounded-xl p-6">
-              <h2 className="text-sm font-semibold text-slate-900 dark:text-white mb-6">Evolución de Ingresos</h2>
+              <h2 className="text-sm font-semibold text-slate-900 dark:text-white mb-1">Evolución de Ingresos</h2>
+              <p className="text-xs text-gray-500 mb-4">Ventas diarias — {fecha.toLocaleString('es-ES', { month: 'long', year: 'numeric' })} (hasta el día {fecha.getDate()})</p>
               <ResponsiveContainer width="100%" height={300}>
                 <AreaChart data={ventasMensuales}>
                   <defs>
@@ -230,9 +273,9 @@ export default function Analytics() {
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" />
                   <XAxis dataKey="mes" stroke="#6b7280" fontSize={12} tickLine={false} axisLine={false} />
-                  <YAxis stroke="#6b7280" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `$${value/1000}k`} />
-                  <Tooltip {...tooltipStyle} formatter={(val) => [`$${val.toLocaleString()}`, 'Ventas']} />
-                  <Area type="monotone" dataKey="ventas" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorVentas)" />
+                  <YAxis stroke="#6b7280" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `S/ ${value >= 1000 ? (value/1000).toFixed(1) + 'k' : value}`} />
+                  <Tooltip {...tooltipStyle} formatter={(val) => [`S/ ${val.toLocaleString()}`, 'Ventas']} />
+                  <Area type="monotone" dataKey="ventas" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorVentas)" isAnimationActive={true} animationDuration={1500} animationBegin={300} animationEasing="ease-out" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -248,8 +291,8 @@ export default function Analytics() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" horizontal={false} />
                   <XAxis type="number" stroke="#6b7280" fontSize={12} tickLine={false} axisLine={false} />
                   <YAxis dataKey="nombre" type="category" stroke="#6b7280" fontSize={12} tickLine={false} axisLine={false} />
-                  <Tooltip {...tooltipStyle} formatter={(val) => [`$${val.toLocaleString()}`, 'Ingresos']} />
-                  <Bar dataKey="ingresos" fill="#10b981" radius={[0, 4, 4, 0]} barSize={20} />
+                  <Tooltip {...tooltipStyle} formatter={(val) => [`S/ ${val.toLocaleString()}`, 'Ingresos']} />
+                  <Bar dataKey="ingresos" fill="#10b981" radius={[0, 4, 4, 0]} barSize={20} isAnimationActive={true} animationDuration={1500} animationBegin={300} animationEasing="ease-out" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -270,7 +313,7 @@ export default function Analytics() {
                       <tr key={i}>
                         <td className="py-3 text-slate-900 dark:text-white">{p.nombre}</td>
                         <td className="py-3 text-right text-slate-600 dark:text-gray-300">{p.unidades}</td>
-                        <td className="py-3 text-right font-semibold text-green-500">${p.ingresos.toLocaleString()}</td>
+                        <td className="py-3 text-right font-semibold text-green-500">S/ {p.ingresos.toLocaleString()}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -287,12 +330,12 @@ export default function Analytics() {
               <BarChart data={categoriaData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" vertical={false} />
                 <XAxis dataKey="cat" stroke="#6b7280" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis yAxisId="left" stroke="#6b7280" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => `$${val/1000}k`} />
+                <YAxis yAxisId="left" stroke="#6b7280" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => `S/ ${val/1000}k`} />
                 <YAxis yAxisId="right" orientation="right" stroke="#6b7280" fontSize={12} tickLine={false} axisLine={false} />
                 <Tooltip {...tooltipStyle} />
                 <Legend />
-                <Bar yAxisId="left" dataKey="ventas" name="Ventas ($)" fill="#6366f1" radius={[4, 4, 0, 0]} />
-                <Bar yAxisId="right" dataKey="pedidos" name="Pedidos" fill="#06b6d4" radius={[4, 4, 0, 0]} />
+                <Bar yAxisId="left" dataKey="ventas" name="Ventas (S/)" fill="#6366f1" radius={[4, 4, 0, 0]} isAnimationActive={true} animationDuration={1500} animationBegin={300} animationEasing="ease-out" />
+                <Bar yAxisId="right" dataKey="pedidos" name="Pedidos" fill="#06b6d4" radius={[4, 4, 0, 0]} isAnimationActive={true} animationDuration={1500} animationBegin={500} animationEasing="ease-out" />
               </BarChart>
             </ResponsiveContainer>
           </div>
