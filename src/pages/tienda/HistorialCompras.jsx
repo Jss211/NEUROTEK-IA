@@ -127,7 +127,7 @@ export default function HistorialCompras() {
             </div>
             <div className="bg-white dark:bg-[#13151f] border border-black/5 dark:border-white/5 rounded-2xl p-4 text-center shadow-sm">
               <p className="text-2xl font-bold text-primary">
-                ${ordenes.reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0).toFixed(2)}
+                S/ {ordenes.reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0).toFixed(2)}
               </p>
               <p className="text-xs text-slate-500 font-medium mt-1">Total Gastado</p>
             </div>
@@ -211,7 +211,7 @@ export default function HistorialCompras() {
                       {/* Total */}
                       <div className="text-right">
                         <p className="text-xs text-slate-500">Total</p>
-                        <p className="text-sm font-bold text-primary">${parseFloat(orden.total).toFixed(2)}</p>
+                        <p className="text-sm font-bold text-primary">S/ {parseFloat(orden.total).toFixed(2)}</p>
                       </div>
 
                       {/* Status badge */}
@@ -255,7 +255,7 @@ export default function HistorialCompras() {
                                   </span>
                                 </div>
                                 <span className="text-sm font-semibold text-primary shrink-0 ml-4">
-                                  ${(parseFloat(prod.precio) * (prod.cantidad || 1)).toFixed(2)}
+                                  S/ {(parseFloat(prod.precio) * (prod.cantidad || 1)).toFixed(2)}
                                 </span>
                               </div>
                             ))}
@@ -269,7 +269,7 @@ export default function HistorialCompras() {
                         {/* Order total summary */}
                         <div className="mt-4 pt-4 border-t border-slate-200 dark:border-white/5 flex items-center justify-between">
                           <span className="text-sm font-medium text-slate-500 dark:text-slate-400">Total de la orden</span>
-                          <span className="text-lg font-bold text-primary">${parseFloat(orden.total).toFixed(2)}</span>
+                          <span className="text-lg font-bold text-primary">S/ {parseFloat(orden.total).toFixed(2)}</span>
                         </div>
                       </div>
                     </div>

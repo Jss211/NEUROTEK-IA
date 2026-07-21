@@ -2,10 +2,12 @@ import { useState } from 'react';
 import { useTienda } from '../../context/TiendaContext';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { useConfig } from '../../context/ConfigContext';
 
 export default function CarritoDrawer() {
   const { isCarritoOpen, setIsCarritoOpen, carrito, removerDelCarrito, actualizarCantidad, totalCarrito, realizarCompra, comprando } = useTienda();
   const { user } = useAuth();
+  const { formatPrice, getLocalized } = useConfig();
   const navigate = useNavigate();
   const [compraExitosa, setCompraExitosa] = useState(false);
   const [errorCompra, setErrorCompra] = useState('');
@@ -92,10 +94,10 @@ export default function CarritoDrawer() {
             ) : (
               carrito.map((item) => (
                 <div key={item.id} className="flex gap-4 bg-slate-50 dark:bg-black/20 p-3 rounded-xl border border-slate-200 dark:border-white/5">
-                  <img src={item.imagen || item.imagen_url} alt={item.nombre} className="w-20 h-20 object-cover rounded-lg bg-slate-200 dark:bg-slate-800" />
+                  <img src={item.imagen || item.imagen_url} alt={getLocalized(item, 'nombre')} className="w-20 h-20 object-cover rounded-lg bg-slate-200 dark:bg-slate-800" />
                   <div className="flex-1">
-                    <h3 className="font-medium text-slate-900 dark:text-white text-sm line-clamp-2">{item.nombre}</h3>
-                    <p className="text-primary font-bold mt-1">${item.precio.toFixed(2)}</p>
+                    <h3 className="font-medium text-slate-900 dark:text-white text-sm line-clamp-2">{getLocalized(item, 'nombre')}</h3>
+                    <p className="text-primary font-bold mt-1">{formatPrice(item.precio)}</p>
                     
                     <div className="flex items-center justify-between mt-3">
                       <div className="flex items-center bg-white dark:bg-slate-800 rounded-md border border-slate-200 dark:border-slate-700">
@@ -136,7 +138,7 @@ export default function CarritoDrawer() {
           <div className="p-6 border-t border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-[#13151f]">
             <div className="flex justify-between items-center mb-4 text-slate-900 dark:text-white">
               <span className="font-medium">Total</span>
-              <span className="text-2xl font-bold">${totalCarrito.toFixed(2)}</span>
+              <span className="text-2xl font-bold">{formatPrice(totalCarrito)}</span>
             </div>
             
             {errorCompra && (

@@ -3,15 +3,17 @@ import AdminLayout from '../../components/admin/AdminLayout';
 import { supabase } from '../../lib/supabase';
 import Toast from '../../components/Toast';
 import { useAuth } from '../../context/AuthContext';
+import { useConfig } from '../../context/ConfigContext';
 
 export default function Equipo() {
-  const { user } = useAuth()
+  const { user } = useAuth();
+  const { t } = useConfig();
   const [miembros, setMiembros] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [toast, setToast] = useState(null);
   const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteRole, setInviteRole] = useState('Vendedor');
+  const [inviteRole, setInviteRole] = useState(t('admin.team.role.seller'));
 
   useEffect(() => {
     const fetchUsuarios = async () => {
@@ -44,7 +46,7 @@ export default function Equipo() {
             color,
             departamento: u.departamento || 'Sin asignar',
             telefono: u.telefono || 'Sin teléfono',
-            estado: u.email === user?.email ? 'En línea' : 'Desconectado',
+            estado: u.email === user?.email ? t('admin.team.status.online') : t('admin.team.status.offline'),
             fechaIngreso: u.created_at ? new Date(u.created_at).toLocaleDateString() : 'Desconocida'
           };
         });
@@ -63,13 +65,13 @@ export default function Equipo() {
   const handleInvite = (e) => {
     e.preventDefault();
     if (user?.email === 'demo@neurotek.com') {
-      setToast({ message: 'Acción deshabilitada en modo Demo (Solo Lectura).', type: 'error' });
+      setToast({ message: t('admin.team.toast.demo'), type: 'error' });
       return;
     }
     if (!inviteEmail) return;
-    setToast({ message: 'Enviando invitación...', type: 'warning' });
+    setToast({ message: t('admin.team.toast.sending_invite'), type: 'warning' });
     setTimeout(() => {
-      setToast({ message: `Invitación enviada a ${inviteEmail} como ${inviteRole}.`, type: 'success' });
+      setToast({ message: `${t('admin.team.toast.invite_sent')} ${inviteEmail} ${t('admin.team.toast.as')} ${inviteRole}.`, type: 'success' });
       setIsAddModalOpen(false);
       setInviteEmail('');
     }, 1500);
@@ -77,7 +79,7 @@ export default function Equipo() {
 
   const totalMiembros = miembros.length;
   const totalAdmins = miembros.filter(m => m.rol === 'admin').length;
-  const totalActivos = miembros.filter(m => m.estado === 'En línea').length;
+  const totalActivos = miembros.filter(m => m.estado === t('admin.team.status.online')).length;
 
   return (
     <AdminLayout>
@@ -85,20 +87,11 @@ export default function Equipo() {
       
       <div className="p-6 text-slate-900 dark:text-white max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex justify-between items-center mb-8">
+        <div className="mb-8">
           <div>
-            <h1 className="text-3xl font-bold mb-1">Equipo</h1>
-            <p className="text-slate-400 dark:text-slate-500 text-sm">Gestión de miembros y permisos</p>
+            <h1 className="text-3xl font-bold mb-1">{t('admin.team.title')}</h1>
+            <p className="text-slate-400 dark:text-slate-500 text-sm">{t('admin.team.subtitle')}</p>
           </div>
-          <button 
-            onClick={() => setIsAddModalOpen(true)}
-            className="bg-primary/80 hover:bg-primary text-slate-900 dark:text-white px-4 py-2 rounded-md flex items-center gap-2 transition-colors font-medium shadow-lg shadow-primary/20"
-          >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-            </svg>
-            Agregar Miembro
-          </button>
         </div>
 
         {/* KPIs */}
@@ -106,7 +99,7 @@ export default function Equipo() {
           {/* Total Miembros */}
           <div className="bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-xl p-6 flex justify-between items-center">
             <div>
-              <p className="text-slate-400 dark:text-slate-500 text-sm mb-1">Total Miembros</p>
+              <p className="text-slate-400 dark:text-slate-500 text-sm mb-1">{t('admin.team.total_members')}</p>
               <h2 className="text-3xl font-bold">{loading ? '...' : totalMiembros}</h2>
             </div>
             <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
@@ -118,7 +111,7 @@ export default function Equipo() {
           {/* Administradores */}
           <div className="bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-xl p-6 flex justify-between items-center">
             <div>
-              <p className="text-slate-400 dark:text-slate-500 text-sm mb-1">Administradores</p>
+              <p className="text-slate-400 dark:text-slate-500 text-sm mb-1">{t('admin.team.admins')}</p>
               <h2 className="text-3xl font-bold">{loading ? '...' : totalAdmins}</h2>
             </div>
             <div className="w-12 h-12 bg-amber-500/10 rounded-lg flex items-center justify-center">
@@ -130,7 +123,7 @@ export default function Equipo() {
           {/* Activos */}
           <div className="bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-xl p-6 flex justify-between items-center">
             <div>
-              <p className="text-slate-400 dark:text-slate-500 text-sm mb-1">Activos</p>
+              <p className="text-slate-400 dark:text-slate-500 text-sm mb-1">{t('admin.team.active')}</p>
               <h2 className="text-3xl font-bold">{loading ? '...' : totalActivos}</h2>
             </div>
             <div className="w-12 h-12 bg-emerald-500/10 rounded-lg flex items-center justify-center">
@@ -144,8 +137,8 @@ export default function Equipo() {
         {/* Tabla */}
         <div className="bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-xl overflow-hidden">
           <div className="p-6 border-b border-slate-200 dark:border-slate-700/50">
-            <h3 className="text-lg font-semibold">Miembros del Equipo</h3>
-            <p className="text-slate-400 dark:text-slate-500 text-sm">Administra roles y permisos de usuarios</p>
+            <h3 className="text-lg font-semibold">{t('admin.team.table_title')}</h3>
+            <p className="text-slate-400 dark:text-slate-500 text-sm">{t('admin.team.table_subtitle')}</p>
           </div>
           <div className="overflow-x-auto">
             {loading ? (
@@ -156,11 +149,11 @@ export default function Equipo() {
             <table className="w-full text-left text-sm whitespace-nowrap">
               <thead className="bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300">
                 <tr>
-                  <th className="px-6 py-4 font-medium">Miembro</th>
-                  <th className="px-6 py-4 font-medium">Contacto</th>
-                  <th className="px-6 py-4 font-medium">Rol</th>
-                  <th className="px-6 py-4 font-medium">Estado</th>
-                  <th className="px-6 py-4 font-medium">Fecha Ingreso</th>
+                  <th className="px-6 py-4 font-medium">{t('admin.team.table.member')}</th>
+                  <th className="px-6 py-4 font-medium">{t('admin.team.table.contact')}</th>
+                  <th className="px-6 py-4 font-medium">{t('admin.team.table.role')}</th>
+                  <th className="px-6 py-4 font-medium">{t('admin.team.table.status')}</th>
+                  <th className="px-6 py-4 font-medium">{t('admin.team.table.join_date')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-700/50">
@@ -203,7 +196,7 @@ export default function Equipo() {
                           <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M10 2a1 1 0 011 1v1.323l3.954 1.582 1.599-.8a1 1 0 01.894 1.79l-1.233.616 1.738 5.42a1 1 0 01-.285 1.05A3.989 3.989 0 0115 15a3.984 3.984 0 01-2.677-1.031l-1.079.27a5 5 0 00-2.244 0l-1.079-.27A3.984 3.984 0 015 15a3.989 3.989 0 01-2.667-1.019 1 1 0 01-.285-1.05l1.738-5.42-1.233-.617a1 1 0 01.894-1.788l1.599.799L9 4.323V3a1 1 0 011-1z" clipRule="evenodd" />
                           </svg>
-                          Admin
+                          {t('admin.team.role.admin')}
                         </span>
                       )}
                       {miembro.rol === 'vendedor' && (
@@ -211,7 +204,7 @@ export default function Equipo() {
                           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                           </svg>
-                          Vendedor
+                          {t('admin.team.role.seller')}
                         </span>
                       )}
                       {miembro.rol === 'cliente' && (
@@ -219,13 +212,13 @@ export default function Equipo() {
                           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                           </svg>
-                          Cliente
+                          {t('admin.team.role.client')}
                         </span>
                       )}
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${miembro.estado === 'En línea' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-slate-600/30 text-slate-400 dark:text-slate-500 dark:text-slate-400'}`}>
-                        {miembro.estado === 'En línea' && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5 animate-pulse"></span>}
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${miembro.estado === t('admin.team.status.online') ? 'bg-emerald-500/10 text-emerald-500' : 'bg-slate-600/30 text-slate-400 dark:text-slate-500 dark:text-slate-400'}`}>
+                        {miembro.estado === t('admin.team.status.online') && <span className="w-1.5 h-1.5 rounded-full bg-emerald-50 mr-1.5 animate-pulse"></span>}
                         {miembro.estado}
                       </span>
                     </td>
@@ -245,8 +238,8 @@ export default function Equipo() {
           <div className="bg-white dark:bg-[#13151f] rounded-2xl w-full max-w-md shadow-2xl overflow-hidden border border-slate-200 dark:border-white/10 animate-fade-in">
             <div className="p-6 border-b border-slate-200 dark:border-white/10 flex justify-between items-center">
               <div>
-                <h3 className="text-xl font-bold text-slate-900 dark:text-white">Invitar al Equipo</h3>
-                <p className="text-sm text-slate-500">Se enviará una invitación por correo</p>
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white">{t('admin.team.invite.title')}</h3>
+                <p className="text-sm text-slate-500">{t('admin.team.invite.subtitle')}</p>
               </div>
               <button onClick={() => setIsAddModalOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors">
                 <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
@@ -257,12 +250,12 @@ export default function Equipo() {
               <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 p-4 rounded-xl flex gap-3 text-amber-700 dark:text-amber-500 text-sm">
                 <svg className="w-5 h-5 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" /></svg>
                 <p>
-                  Por seguridad, asegúrate de asignar el rol correcto. El usuario recibirá un enlace para establecer su contraseña a través de Supabase Auth.
+                  {t('admin.team.invite.warning')}
                 </p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Correo Electrónico</label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('admin.team.invite.email')}</label>
                 <input 
                   type="email" 
                   required
@@ -274,23 +267,23 @@ export default function Equipo() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Rol de Acceso</label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('admin.team.invite.role')}</label>
                 <select 
                   value={inviteRole}
                   onChange={e => setInviteRole(e.target.value)}
                   className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-slate-900 dark:text-white focus:outline-none focus:border-primary transition-all appearance-none"
                 >
-                  <option value="Admin">Administrador (Control Total)</option>
-                  <option value="Vendedor">Vendedor (Solo gestionar ventas)</option>
+                  <option value="Admin">{t('admin.team.invite.role_admin')}</option>
+                  <option value="Vendedor">{t('admin.team.invite.role_seller')}</option>
                 </select>
               </div>
 
               <div className="pt-2 flex justify-end gap-3">
                 <button type="button" onClick={() => setIsAddModalOpen(false)} className="px-5 py-2.5 rounded-xl font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-                  Cancelar
+                  {t('admin.team.invite.cancel')}
                 </button>
                 <button type="submit" className="px-5 py-2.5 rounded-xl font-bold bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20 transition-all">
-                  Enviar Invitación
+                  {t('admin.team.invite.send')}
                 </button>
               </div>
             </form>

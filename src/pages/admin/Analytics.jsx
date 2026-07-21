@@ -8,8 +8,7 @@ import AdminLayout from '../../components/admin/AdminLayout'
 import { DatePicker } from '../../components/ui/DatePicker'
 import { exportElementToPdf } from '../../lib/pdfExport'
 import { supabase } from '../../lib/supabase'
-
-const TABS = ['Ingresos', 'Productos', 'Categorias', 'Por Horario']
+import { useConfig } from '../../context/ConfigContext'
 
 const tooltipStyle = {
   contentStyle: {
@@ -22,7 +21,9 @@ const tooltipStyle = {
 }
 
 export default function Analytics() {
-  const [tabActiva, setTabActiva] = useState('Ingresos')
+  const { t } = useConfig()
+  const TABS = [t('admin.ana.tabs.revenue'), t('admin.ana.tabs.products'), t('admin.ana.tabs.categories'), t('admin.ana.tabs.schedule')]
+  const [tabActiva, setTabActiva] = useState(TABS[0])
   const [fecha, setFecha] = useState(new Date())
   const [exportando, setExportando] = useState(false)
   const analyticsRef = useRef(null)
@@ -141,21 +142,21 @@ export default function Analytics() {
       // 4. Categoría Data (based on orders in selected period)
       const catCount = {}
       ordenesData.forEach(o => {
-        const cat = o.categoria || 'Otros'
+        const cat = o.categoria || t('admin.ana.others')
         if (!catCount[cat]) catCount[cat] = { cat, ventas: 0, pedidos: 0 }
         catCount[cat].pedidos += 1
         catCount[cat].ventas += parseFloat(o.total) || 0
       })
       // Fallback to product categories if orders don't have category field
-      if (Object.keys(catCount).length === 0 || (Object.keys(catCount).length === 1 && catCount['Otros'])) {
+      if (Object.keys(catCount).length === 0 || (Object.keys(catCount).length === 1 && catCount[t('admin.ana.others')])) {
         const catFromProducts = {}
         productosData.forEach(p => {
-          const cat = p.categoria || 'Otros'
+          const cat = p.categoria || t('admin.ana.others')
           if (!catFromProducts[cat]) catFromProducts[cat] = { cat, ventas: 0, pedidos: 0 }
           catFromProducts[cat].pedidos += 1
           catFromProducts[cat].ventas += parseFloat(p.precio) * 2 || 0
         })
-        setCategoriaData(Object.values(catFromProducts).length > 0 ? Object.values(catFromProducts) : [{ cat: 'Varios', ventas: 0, pedidos: 0 }])
+        setCategoriaData(Object.values(catFromProducts).length > 0 ? Object.values(catFromProducts) : [{ cat: t('admin.ana.various'), ventas: 0, pedidos: 0 }])
       } else {
         setCategoriaData(Object.values(catCount))
       }
@@ -173,23 +174,23 @@ export default function Analytics() {
       await exportElementToPdf({
         element: analyticsRef.current,
         fileName: `analytics-neurotek-${format(new Date(), 'yyyy-MM-dd')}.pdf`,
-        fallbackTitle: 'Analytics NeuroTek',
+        fallbackTitle: t('admin.ana.pdf.title'),
         fallbackSections: [
           {
-            title: 'Metricas Globales',
+            title: t('admin.ana.pdf.global_metrics'),
             lines: [
-              `Ventas Totales: S/ ${metricasGlobales.ventasTotales.toLocaleString()}`,
-              `Total Pedidos: ${metricasGlobales.totalPedidos}`,
-              `Total Clientes: ${metricasGlobales.totalClientes}`,
+              `${t('admin.ana.pdf.total_sales')} ${metricasGlobales.ventasTotales.toLocaleString()}`,
+              `${t('admin.ana.pdf.total_orders')} ${metricasGlobales.totalPedidos}`,
+              `${t('admin.ana.pdf.total_clients')} ${metricasGlobales.totalClientes}`,
             ],
           },
           {
-            title: 'Ventas mensuales',
-            lines: ventasMensuales.map((item) => `${item.mes}: ventas S/ ${item.ventas.toLocaleString()}, pedidos ${item.pedidos}, clientes ${item.clientes}`),
+            title: t('admin.ana.pdf.monthly_sales'),
+            lines: ventasMensuales.map((item) => `${item.mes}${t('admin.ana.pdf.sales')} ${item.ventas.toLocaleString()}${t('admin.ana.pdf.orders')} ${item.pedidos}${t('admin.ana.pdf.clients')} ${item.clientes}`),
           },
           {
-            title: 'Productos mas vendidos',
-            lines: productosMasVendidos.map((item) => `${item.nombre}: ${item.unidades} unidades, S/ ${item.ingresos.toLocaleString()} ingresos`),
+            title: t('admin.ana.pdf.top_products'),
+            lines: productosMasVendidos.map((item) => `${item.nombre}: ${item.unidades} ${t('admin.ana.pdf.units')} ${item.ingresos.toLocaleString()} ${t('admin.ana.pdf.income')}`),
           },
         ],
       })
@@ -204,7 +205,7 @@ export default function Analytics() {
     return (
       <AdminLayout>
         <div className="flex items-center justify-center min-h-[50vh]">
-          <div className="animate-pulse text-primary font-medium">Sincronizando métricas en tiempo real...</div>
+          <div className="animate-pulse text-primary font-medium">{t('admin.ana.loading')}</div>
         </div>
       </AdminLayout>
     )
@@ -214,8 +215,8 @@ export default function Analytics() {
     <AdminLayout>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Analytics</h1>
-          <p className="text-slate-500 dark:text-gray-400 text-sm mt-1">Análisis detallado de rendimiento y métricas</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t('admin.ana.title')}</h1>
+          <p className="text-slate-500 dark:text-gray-400 text-sm mt-1">{t('admin.ana.subtitle')}</p>
         </div>
         <div className="flex items-center gap-3">
           <DatePicker date={fecha} onDateChange={(d) => d && setFecha(d)} className="bg-white dark:bg-transparent" />
@@ -227,14 +228,14 @@ export default function Analytics() {
             {exportando ? (
               <span className="flex items-center gap-2">
                 <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                Generando...
+                {t('admin.ana.generating')}
               </span>
             ) : (
               <span className="flex items-center gap-2">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                 </svg>
-                Exportar Reporte
+                {t('admin.ana.export')}
               </span>
             )}
           </button>
@@ -258,11 +259,11 @@ export default function Analytics() {
           ))}
         </div>
 
-        {tabActiva === 'Ingresos' && (
+        {tabActiva === t('admin.ana.tabs.revenue') && (
           <div className="grid grid-cols-1 gap-6">
             <div className="bg-white dark:bg-[#1a1d2e] border border-black/5 dark:border-white/5 rounded-xl p-6">
-              <h2 className="text-sm font-semibold text-slate-900 dark:text-white mb-1">Evolución de Ingresos</h2>
-              <p className="text-xs text-gray-500 mb-4">Ventas diarias — {fecha.toLocaleString('es-ES', { month: 'long', year: 'numeric' })} (hasta el día {fecha.getDate()})</p>
+              <h2 className="text-sm font-semibold text-slate-900 dark:text-white mb-1">{t('admin.ana.revenue_evolution')}</h2>
+              <p className="text-xs text-gray-500 mb-4">{t('admin.ana.daily_sales')} {fecha.toLocaleString('es-ES', { month: 'long', year: 'numeric' })} {t('admin.ana.until_day')} {fecha.getDate()})</p>
               <ResponsiveContainer width="100%" height={300}>
                 <AreaChart data={ventasMensuales}>
                   <defs>
@@ -274,7 +275,7 @@ export default function Analytics() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" />
                   <XAxis dataKey="mes" stroke="#6b7280" fontSize={12} tickLine={false} axisLine={false} />
                   <YAxis stroke="#6b7280" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `S/ ${value >= 1000 ? (value/1000).toFixed(1) + 'k' : value}`} />
-                  <Tooltip {...tooltipStyle} formatter={(val) => [`S/ ${val.toLocaleString()}`, 'Ventas']} />
+                  <Tooltip {...tooltipStyle} formatter={(val) => [`S/ ${val.toLocaleString()}`, t('admin.ana.sales')]} />
                   <Area type="monotone" dataKey="ventas" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorVentas)" isAnimationActive={true} animationDuration={1500} animationBegin={300} animationEasing="ease-out" />
                 </AreaChart>
               </ResponsiveContainer>
@@ -282,30 +283,30 @@ export default function Analytics() {
           </div>
         )}
 
-        {tabActiva === 'Productos' && (
+        {tabActiva === t('admin.ana.tabs.products') && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="bg-white dark:bg-[#1a1d2e] border border-black/5 dark:border-white/5 rounded-xl p-6">
-              <h2 className="text-sm font-semibold text-slate-900 dark:text-white mb-6">Top Productos por Ingresos</h2>
+              <h2 className="text-sm font-semibold text-slate-900 dark:text-white mb-6">{t('admin.ana.top_products_revenue')}</h2>
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={productosMasVendidos} layout="vertical" margin={{ left: 40 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" horizontal={false} />
                   <XAxis type="number" stroke="#6b7280" fontSize={12} tickLine={false} axisLine={false} />
                   <YAxis dataKey="nombre" type="category" stroke="#6b7280" fontSize={12} tickLine={false} axisLine={false} />
-                  <Tooltip {...tooltipStyle} formatter={(val) => [`S/ ${val.toLocaleString()}`, 'Ingresos']} />
+                  <Tooltip {...tooltipStyle} formatter={(val) => [`S/ ${val.toLocaleString()}`, t('admin.ana.revenue')]} />
                   <Bar dataKey="ingresos" fill="#10b981" radius={[0, 4, 4, 0]} barSize={20} isAnimationActive={true} animationDuration={1500} animationBegin={300} animationEasing="ease-out" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
             
             <div className="bg-white dark:bg-[#1a1d2e] border border-black/5 dark:border-white/5 rounded-xl p-6">
-              <h2 className="text-sm font-semibold text-slate-900 dark:text-white mb-4">Detalle de Productos Top</h2>
+              <h2 className="text-sm font-semibold text-slate-900 dark:text-white mb-4">{t('admin.ana.top_products_detail')}</h2>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="text-gray-500 border-b border-black/5 dark:border-white/5">
-                      <th className="pb-3 text-left font-medium">Producto</th>
-                      <th className="pb-3 text-right font-medium">Unidades</th>
-                      <th className="pb-3 text-right font-medium">Ingresos</th>
+                      <th className="pb-3 text-left font-medium">{t('admin.ana.product')}</th>
+                      <th className="pb-3 text-right font-medium">{t('admin.ana.units_col')}</th>
+                      <th className="pb-3 text-right font-medium">{t('admin.ana.revenue')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-black/5 dark:divide-white/5">
@@ -323,9 +324,9 @@ export default function Analytics() {
           </div>
         )}
 
-        {tabActiva === 'Categorias' && (
+        {tabActiva === t('admin.ana.tabs.categories') && (
           <div className="bg-white dark:bg-[#1a1d2e] border border-black/5 dark:border-white/5 rounded-xl p-6">
-            <h2 className="text-sm font-semibold text-slate-900 dark:text-white mb-6">Desempeño por Categoría</h2>
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-white mb-6">{t('admin.ana.category_performance')}</h2>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={categoriaData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" vertical={false} />
@@ -334,22 +335,22 @@ export default function Analytics() {
                 <YAxis yAxisId="right" orientation="right" stroke="#6b7280" fontSize={12} tickLine={false} axisLine={false} />
                 <Tooltip {...tooltipStyle} />
                 <Legend />
-                <Bar yAxisId="left" dataKey="ventas" name="Ventas (S/)" fill="#6366f1" radius={[4, 4, 0, 0]} isAnimationActive={true} animationDuration={1500} animationBegin={300} animationEasing="ease-out" />
-                <Bar yAxisId="right" dataKey="pedidos" name="Pedidos" fill="#06b6d4" radius={[4, 4, 0, 0]} isAnimationActive={true} animationDuration={1500} animationBegin={500} animationEasing="ease-out" />
+                <Bar yAxisId="left" dataKey="ventas" name={t('admin.ana.sales_currency')} fill="#6366f1" radius={[4, 4, 0, 0]} isAnimationActive={true} animationDuration={1500} animationBegin={300} animationEasing="ease-out" />
+                <Bar yAxisId="right" dataKey="pedidos" name={t('admin.ana.orders')} fill="#06b6d4" radius={[4, 4, 0, 0]} isAnimationActive={true} animationDuration={1500} animationBegin={500} animationEasing="ease-out" />
               </BarChart>
             </ResponsiveContainer>
           </div>
         )}
 
-        {tabActiva === 'Por Horario' && (
+        {tabActiva === t('admin.ana.tabs.schedule') && (
           <div className="bg-white dark:bg-[#1a1d2e] border border-black/5 dark:border-white/5 rounded-xl p-6">
-            <h2 className="text-sm font-semibold text-slate-900 dark:text-white mb-6">Actividad por Horario</h2>
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-white mb-6">{t('admin.ana.schedule_activity')}</h2>
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={porHorario}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" vertical={false} />
                 <XAxis dataKey="hora" stroke="#6b7280" fontSize={12} tickLine={false} axisLine={false} />
                 <YAxis stroke="#6b7280" fontSize={12} tickLine={false} axisLine={false} />
-                <Tooltip {...tooltipStyle} formatter={(val) => [`${val} ventas`, 'Frecuencia']} />
+                <Tooltip {...tooltipStyle} formatter={(val) => [`${val} ${t('admin.ana.sales_lowercase')}`, t('admin.ana.frequency')]} />
                 <Line type="monotone" dataKey="ventas" stroke="#f59e0b" strokeWidth={3} dot={{ fill: '#f59e0b', strokeWidth: 2, r: 4 }} activeDot={{ r: 6 }} />
               </LineChart>
             </ResponsiveContainer>

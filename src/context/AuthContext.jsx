@@ -11,12 +11,18 @@ export function AuthProvider({ children }) {
     if (!currentUser) return null
     const { data: perfil } = await supabase
       .from('usuarios')
-      .select('rol')
+      .select('rol, avatar_url, nombre')
       .eq('id', currentUser.id)
       .single()
     
     // Usa el rol real de la base de datos, o 'cliente' por defecto
     currentUser.role = perfil?.rol || 'cliente'
+    
+    // Sobrescribir metadatos si hay información en la base de datos (evita que Google OAuth los borre)
+    if (!currentUser.user_metadata) currentUser.user_metadata = {}
+    if (perfil?.avatar_url) currentUser.user_metadata.avatar_url = perfil.avatar_url
+    if (perfil?.nombre) currentUser.user_metadata.full_name = perfil.nombre
+
     return currentUser
   }
 

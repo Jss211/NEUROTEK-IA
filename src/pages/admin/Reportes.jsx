@@ -8,6 +8,7 @@ import {
 import AdminLayout from '../../components/admin/AdminLayout'
 import { exportElementToPdf } from '../../lib/pdfExport'
 import { supabase } from '../../lib/supabase'
+import { useConfig } from '../../context/ConfigContext'
 
 const tooltipStyle = {
   contentStyle: { backgroundColor: '#1a1d2e', border: '1px solid #ffffff10', borderRadius: '8px', color: '#fff', fontSize: '12px' },
@@ -36,6 +37,7 @@ const CATEGORY_COLORS = {
 }
 
 export default function Reportes() {
+  const { t } = useConfig()
   const [fecha, setFecha] = useState(new Date())
   const [exportando, setExportando] = useState(false)
   const reporteRef = useRef(null)
@@ -108,7 +110,7 @@ export default function Reportes() {
       const catCount = {}
       let totalValorInventario = 0
       productosData.forEach(p => {
-        const cat = p.categoria || 'Otros'
+        const cat = p.categoria || t('admin.ana.others')
         const valor = parseFloat(p.precio) || 1
         if (!catCount[cat]) catCount[cat] = 0
         catCount[cat] += valor
@@ -137,22 +139,22 @@ export default function Reportes() {
       await exportElementToPdf({
         element: reporteRef.current,
         fileName: `reporte-neurotek-${format(new Date(), 'yyyy-MM-dd')}.pdf`,
-        fallbackTitle: 'Reporte NeuroTek',
+        fallbackTitle: t('admin.rep.pdf.title'),
         fallbackSections: [
           {
-            title: 'Resumen',
+            title: t('admin.rep.pdf.summary'),
             lines: [
-              `Ventas Totales: S/ ${metricasGlobales.ventasTotales.toLocaleString()}`,
-              `Productos Vendidos (Items): ${metricasGlobales.totalProductos}`,
-              `Clientes Registrados: ${metricasGlobales.totalClientes}`,
+              `${t('admin.rep.pdf.total_sales')} ${metricasGlobales.ventasTotales.toLocaleString()}`,
+              `${t('admin.rep.pdf.products_sold')} ${metricasGlobales.totalProductos}`,
+              `${t('admin.rep.pdf.clients_registered')} ${metricasGlobales.totalClientes}`,
             ],
           },
           {
-            title: 'Ventas vs Gastos (Est)',
-            lines: ventasGastos.map((item) => `${item.mes}: ventas S/ ${item.ventas.toLocaleString()}, gastos S/ ${item.gastos.toLocaleString()}`),
+            title: t('admin.rep.pdf.sales_vs_expenses'),
+            lines: ventasGastos.map((item) => `${item.mes}${t('admin.rep.pdf.sales')} ${item.ventas.toLocaleString()}${t('admin.rep.pdf.expenses')} ${item.gastos.toLocaleString()}`),
           },
           {
-            title: 'Distribucion por Categoria',
+            title: t('admin.rep.pdf.cat_distribution'),
             lines: distribucionCat.map((item) => `${item.name}: ${item.value}%`),
           },
         ],
@@ -168,7 +170,7 @@ export default function Reportes() {
     return (
       <AdminLayout>
         <div className="flex items-center justify-center min-h-[50vh]">
-          <div className="animate-pulse text-primary font-medium">Sincronizando reportes en tiempo real...</div>
+          <div className="animate-pulse text-primary font-medium">{t('admin.rep.loading')}</div>
         </div>
       </AdminLayout>
     )
@@ -179,8 +181,8 @@ export default function Reportes() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Reportes</h1>
-          <p className="text-slate-500 dark:text-gray-400 text-sm mt-1">Análisis y reportes detallados en tiempo real</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t('admin.rep.title')}</h1>
+          <p className="text-slate-500 dark:text-gray-400 text-sm mt-1">{t('admin.rep.subtitle')}</p>
         </div>
         <div className="flex items-center gap-3">
           <DatePicker date={fecha} onDateChange={(d) => d && setFecha(d)} className="bg-white dark:bg-transparent" />
@@ -192,14 +194,14 @@ export default function Reportes() {
             {exportando ? (
               <span className="flex items-center gap-2">
                 <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                Generando...
+                {t('admin.rep.generating')}
               </span>
             ) : (
               <span className="flex items-center gap-2">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                 </svg>
-                Exportar
+                {t('admin.rep.export')}
               </span>
             )}
           </button>
@@ -210,26 +212,26 @@ export default function Reportes() {
         {/* KPIs */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-white dark:bg-[#1a1d2e] border border-black/5 dark:border-white/5 rounded-xl p-5">
-            <p className="text-sm text-slate-500 dark:text-gray-400 mb-1">Ventas Totales</p>
+            <p className="text-sm text-slate-500 dark:text-gray-400 mb-1">{t('admin.rep.kpi.total_sales')}</p>
             <p className="text-2xl font-bold text-slate-900 dark:text-white">${metricasGlobales.ventasTotales.toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
-            <p className="text-xs text-green-500 mt-1">↑ En base a órdenes</p>
+            <p className="text-xs text-green-500 mt-1">{t('admin.rep.kpi.based_orders')}</p>
           </div>
           <div className="bg-white dark:bg-[#1a1d2e] border border-black/5 dark:border-white/5 rounded-xl p-5">
-            <p className="text-sm text-slate-500 dark:text-gray-400 mb-1">Productos Vendidos</p>
+            <p className="text-sm text-slate-500 dark:text-gray-400 mb-1">{t('admin.rep.kpi.products_sold')}</p>
             <p className="text-2xl font-bold text-slate-900 dark:text-white">{metricasGlobales.totalProductos.toLocaleString()}</p>
-            <p className="text-xs text-green-500 mt-1">↑ Total de items</p>
+            <p className="text-xs text-green-500 mt-1">{t('admin.rep.kpi.total_items')}</p>
           </div>
           <div className="bg-white dark:bg-[#1a1d2e] border border-black/5 dark:border-white/5 rounded-xl p-5">
-            <p className="text-sm text-slate-500 dark:text-gray-400 mb-1">Total Clientes</p>
+            <p className="text-sm text-slate-500 dark:text-gray-400 mb-1">{t('admin.rep.kpi.total_clients')}</p>
             <p className="text-2xl font-bold text-slate-900 dark:text-white">{metricasGlobales.totalClientes}</p>
-            <p className="text-xs text-green-500 mt-1">↑ Usuarios registrados</p>
+            <p className="text-xs text-green-500 mt-1">{t('admin.rep.kpi.registered_users')}</p>
           </div>
         </div>
 
         {/* Graficos Principales */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
           <div className="bg-white dark:bg-[#1a1d2e] border border-black/5 dark:border-white/5 rounded-xl p-6">
-            <h2 className="text-sm font-semibold text-slate-900 dark:text-white mb-6">Ventas vs Gastos Operativos (Est.)</h2>
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-white mb-6">{t('admin.rep.chart.sales_expenses')}</h2>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={ventasGastos}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" vertical={false} />
@@ -237,20 +239,20 @@ export default function Reportes() {
                 <YAxis stroke="#6b7280" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => `S/ ${val/1000}k`} />
                 <Tooltip {...tooltipStyle} formatter={(val) => [`S/ ${val.toLocaleString(undefined, {minimumFractionDigits: 2})}`, '']} />
                 <Legend />
-                <Bar dataKey="ventas" name="Ventas Brutas" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="gastos" name="Costos Estimados" fill="#f43f5e" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="ventas" name={t('admin.rep.chart.gross_sales')} fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="gastos" name={t('admin.rep.chart.est_costs')} fill="#f43f5e" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
 
           <div className="bg-white dark:bg-[#1a1d2e] border border-black/5 dark:border-white/5 rounded-xl p-6">
-            <h2 className="text-sm font-semibold text-slate-900 dark:text-white mb-6">Tendencia de Crecimiento</h2>
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-white mb-6">{t('admin.rep.chart.growth_trend')}</h2>
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={tendenciaVentas}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" vertical={false} />
                 <XAxis dataKey="mes" stroke="#6b7280" fontSize={12} tickLine={false} axisLine={false} />
                 <YAxis stroke="#6b7280" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => `S/ ${val/1000}k`} />
-                <Tooltip {...tooltipStyle} formatter={(val) => [`S/ ${val.toLocaleString(undefined, {minimumFractionDigits: 2})}`, 'Ventas']} />
+                <Tooltip {...tooltipStyle} formatter={(val) => [`S/ ${val.toLocaleString(undefined, {minimumFractionDigits: 2})}`, t('admin.rep.chart.sales')]} />
                 <Line type="monotone" dataKey="ventas" stroke="#10b981" strokeWidth={3} dot={{ fill: '#10b981', strokeWidth: 2, r: 4 }} activeDot={{ r: 6 }} />
               </LineChart>
             </ResponsiveContainer>
@@ -260,7 +262,7 @@ export default function Reportes() {
         {/* Distribucion */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-1 bg-white dark:bg-[#1a1d2e] border border-black/5 dark:border-white/5 rounded-xl p-6">
-            <h2 className="text-sm font-semibold text-slate-900 dark:text-white mb-6">Valor por Categoría</h2>
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-white mb-6">{t('admin.rep.chart.cat_value')}</h2>
             <ResponsiveContainer width="100%" height={250}>
               <PieChart>
                 <Pie
@@ -283,20 +285,19 @@ export default function Reportes() {
           </div>
           
           <div className="lg:col-span-2 bg-white dark:bg-[#1a1d2e] border border-black/5 dark:border-white/5 rounded-xl p-6 flex flex-col justify-center">
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Resumen Ejecutivo</h3>
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">{t('admin.rep.exec_summary.title')}</h3>
             <p className="text-slate-500 dark:text-gray-400 text-sm leading-relaxed mb-6">
-              Este reporte en tiempo real detalla las operaciones de tu negocio, extrayendo datos reales de Supabase. 
-              Los márgenes de ganancia e ingresos están tabulados al momento del cierre de cada mes.
+              {t('admin.rep.exec_summary.desc')}
             </p>
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-black/5 dark:bg-white/5 rounded-lg p-4">
-                <p className="text-xs text-slate-500 dark:text-gray-400 mb-1">Mejor Mes (Estimado)</p>
+                <p className="text-xs text-slate-500 dark:text-gray-400 mb-1">{t('admin.rep.exec_summary.best_month')}</p>
                 <p className="font-semibold text-slate-900 dark:text-white">
                   {ventasGastos.length > 0 ? [...ventasGastos].sort((a,b) => b.ventas - a.ventas)[0].mes : 'N/A'}
                 </p>
               </div>
               <div className="bg-black/5 dark:bg-white/5 rounded-lg p-4">
-                <p className="text-xs text-slate-500 dark:text-gray-400 mb-1">Categoría Dominante</p>
+                <p className="text-xs text-slate-500 dark:text-gray-400 mb-1">{t('admin.rep.exec_summary.dom_category')}</p>
                 <p className="font-semibold text-slate-900 dark:text-white">
                   {distribucionCat.length > 0 ? distribucionCat[0].name : 'N/A'}
                 </p>

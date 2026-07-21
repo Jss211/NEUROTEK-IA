@@ -4,14 +4,48 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-  --color-primary: var(--app-primary, #06b6d4); /* Default cyan-500 */
+  --color-primary: var(--app-primary, #06b6d4); 
 }
 
 :root {
-  --app-primary: #06b6d4;
+  --app-primary: #00f3ff;
 }
 
 /* Transición suave al cambiar de tema globalmente */
 html {
   transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+/* Animación global para TODOS los botones */
+button,
+a[role="button"],
+input[type="submit"],
+input[type="button"],
+.btn {
+  transition: transform 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+              box-shadow 0.2s ease,
+              background-color 0.2s ease,
+              color 0.2s ease,
+              border-color 0.2s ease,
+              opacity 0.2s ease;
+}
+
+button:hover:not(:disabled):not([data-no-hover]),
+a[role="button"]:hover:not(:disabled),
+input[type="submit"]:hover:not(:disabled),
+input[type="button"]:hover:not(:disabled),
+.btn:hover:not(:disabled) {
+  transform: translateY(-2px) scale(1.02);
+}
+
+button:active:not(:disabled):not([data-no-hover]),
+a[role="button"]:active:not(:disabled),
+input[type="submit"]:active:not(:disabled),
+input[type="button"]:active:not(:disabled),
+.btn:active:not(:disabled) {
+  transform: translateY(0) scale(0.98);
 }

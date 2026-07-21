@@ -5,15 +5,16 @@ import {
 } from 'recharts'
 import AdminLayout from '../../components/admin/AdminLayout'
 import { useAuth } from '../../context/AuthContext'
+import { useConfig } from '../../context/ConfigContext'
 import { supabase } from '../../lib/supabase'
 
 const estadoColor = {
-  Completada: 'text-green-400 bg-green-400/10',
-  Completado: 'text-green-400 bg-green-400/10',
-  Pendiente:  'text-yellow-400 bg-yellow-400/10',
-  Enviado:    'text-primary/80 bg-primary/80/10',
-  Procesando: 'text-primary/80 bg-primary/80/10',
-  Cancelada:  'text-red-400 bg-red-400/10',
+  completada: 'text-green-400 bg-green-400/10',
+  completado: 'text-green-400 bg-green-400/10',
+  pendiente:  'text-yellow-400 bg-yellow-400/10',
+  enviado:    'text-primary/80 bg-primary/80/10',
+  procesando: 'text-yellow-400 bg-yellow-400/10',
+  cancelada:  'text-red-400 bg-red-400/10',
 }
 
 const tipoColor = {
@@ -32,6 +33,7 @@ const CATEGORY_COLORS = {
 
 export default function AdminDashboard() {
   const { user } = useAuth()
+  const { t, formatPrice, getLocalized, language } = useConfig()
   const nombre = user?.user_metadata?.full_name || user?.email || 'Admin'
 
   const [loading, setLoading] = useState(true)
@@ -74,13 +76,13 @@ export default function AdminDashboard() {
       const clientes = usuariosRes.data || []
 
       // 1. Stats
-      const ventasTotales = ordenes.filter(o => o.estado !== 'Cancelada').reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0)
+      const ventasTotales = ordenes.filter(o => o.estado !== 'Cancelada' && o.estado !== 'Cancelled').reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0)
       
       const newStats = [
         {
-          label: 'Ventas Totales',
-          value: `S/ ${ventasTotales.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-          change: '+Realtime',
+          label: t('admin.dash.sales'),
+          value: formatPrice(ventasTotales),
+          change: `+${t('admin.dash.sales.realtime')}`,
           positive: true,
           icon: (
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -91,9 +93,9 @@ export default function AdminDashboard() {
           bg: 'bg-primary/10',
         },
         {
-          label: 'Productos',
+          label: t('admin.dash.products'),
           value: productos.length.toString(),
-          change: 'En inventario',
+          change: t('admin.dash.products.stock'),
           positive: true,
           icon: (
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -104,9 +106,9 @@ export default function AdminDashboard() {
           bg: 'bg-primary/10',
         },
         {
-          label: 'Pedidos',
+          label: t('admin.dash.orders'),
           value: ordenes.length.toString(),
-          change: 'Totales',
+          change: t('admin.dash.orders.total'),
           positive: true,
           icon: (
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -117,9 +119,9 @@ export default function AdminDashboard() {
           bg: 'bg-primary/10',
         },
         {
-          label: 'Clientes',
+          label: t('admin.dash.clients'),
           value: clientes.length.toString(),
-          change: 'Registrados',
+          change: t('admin.dash.clients.registered'),
           positive: true,
           icon: (
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -137,17 +139,18 @@ export default function AdminDashboard() {
         id: o.id.toString().substring(0,8),
         cliente: o.cliente_nombre || o.cliente,
         producto: o.items + ' items',
-        monto: `S/ ${(parseFloat(o.total) || 0).toFixed(2)}`,
-        estado: o.estado
+        monto: formatPrice(parseFloat(o.total)),
+        estadoOriginal: o.estado,
+        estado: t(`admin.dash.status.${(o.estado || '').toLowerCase()}`) || o.estado
       }))
       setUltimosPedidos(recentOrders)
 
       // 3. Actividad Reciente (mezclando ultimos pedidos y alertas)
       const actividades = ordenes.slice(0, 4).map(o => ({
-        producto: `Orden #${o.id.toString().substring(0,8)}`,
-        tipo: 'Venta',
+        producto: `${t('admin.ord.table.col_order')} #${o.id.toString().substring(0,8)}`,
+        tipo: t('admin.dash.activity.sale') || 'Venta',
         tiempo: new Date(o.fecha).toLocaleDateString(),
-        monto: `S/ ${parseFloat(o.total).toFixed(2)}`,
+        monto: formatPrice(parseFloat(o.total)),
         unidades: `${o.items} items`
       }))
       setActividadReciente(actividades)
@@ -156,7 +159,7 @@ export default function AdminDashboard() {
       const alertas = productos
         .filter(p => p.stock <= p.stock_minimo)
         .map(p => ({
-          producto: p.nombre,
+          producto: getLocalized(p, 'nombre'),
           stock: p.stock,
           minimo: p.stock_minimo,
           porcentaje: p.stock_minimo > 0 ? Math.min(100, Math.round((p.stock / p.stock_minimo) * 100)) : 0
@@ -180,9 +183,10 @@ export default function AdminDashboard() {
 
       // 6. Ventas Mensuales (Agrupando por mes real o dejando un placeholder dinámico)
       const monthly = {}
-      ordenes.filter(o => o.estado !== 'Cancelada').forEach(o => {
+      ordenes.filter(o => o.estado !== 'Cancelada' && o.estado !== 'Cancelled').forEach(o => {
         const d = new Date(o.fecha)
-        const month = d.toLocaleString('es-ES', { month: 'short' }).substring(0, 3)
+        const locale = language === 'en' ? 'en-US' : 'es-ES'
+        const month = d.toLocaleString(locale, { month: 'short' }).substring(0, 3)
         if (!monthly[month]) monthly[month] = { mes: month, ventas: 0, ganancias: 0 }
         monthly[month].ventas += parseFloat(o.total) || 0
         monthly[month].ganancias += (parseFloat(o.total) || 0) * 0.3 // Asumiendo 30% margen por ahora
@@ -216,9 +220,9 @@ export default function AdminDashboard() {
     <AdminLayout>
       {/* Encabezado */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Dashboard</h1>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t('admin.nav.dashboard')}</h1>
         <p className="text-slate-500 dark:text-gray-400 text-sm mt-1">
-          Bienvenido de nuevo, <span className="text-primary/80 font-medium">{nombre}</span> — Resumen de tu negocio en tiempo real
+          {t('admin.dash.welcome')}, <span className="text-primary/80 font-medium">{nombre}</span> — {t('admin.dash.subtitle')}
         </p>
       </div>
 
@@ -242,8 +246,8 @@ export default function AdminDashboard() {
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-6">
         {/* Área chart */}
         <div className="xl:col-span-2 bg-white dark:bg-[#1a1d2e] border border-black/5 dark:border-white/5 rounded-xl p-5">
-          <h2 className="text-sm font-semibold text-slate-900 dark:text-white mb-1">Ventas y Ganancias</h2>
-          <p className="text-xs text-gray-500 mb-4">Ingresos reales (Margen est. 30%)</p>
+          <h2 className="text-sm font-semibold text-slate-900 dark:text-white mb-1">{t('admin.dash.chart.title')}</h2>
+          <p className="text-xs text-gray-500 mb-4">{t('admin.dash.chart.subtitle')}</p>
           <ResponsiveContainer width="100%" height={220}>
             <AreaChart data={ventasMensuales}>
               <defs>
@@ -271,8 +275,8 @@ export default function AdminDashboard() {
 
         {/* Pie chart categorías tech */}
         <div className="bg-white dark:bg-[#1a1d2e] border border-black/5 dark:border-white/5 rounded-xl p-5">
-          <h2 className="text-sm font-semibold text-slate-900 dark:text-white mb-1">Inventario por Categoría</h2>
-          <p className="text-xs text-gray-500 mb-4">Distribución en stock</p>
+          <h2 className="text-sm font-semibold text-slate-900 dark:text-white mb-1">{t('admin.dash.pie.title')}</h2>
+          <p className="text-xs text-gray-500 mb-4">{t('admin.dash.pie.subtitle')}</p>
           <ResponsiveContainer width="100%" height={160}>
             <PieChart>
               <Pie data={categorias} cx="50%" cy="50%" innerRadius={45} outerRadius={70} dataKey="value" paddingAngle={3} isAnimationActive={true} animationDuration={1500} animationBegin={400} animationEasing="ease-out">
@@ -304,8 +308,8 @@ export default function AdminDashboard() {
       <div className="bg-white dark:bg-[#1a1d2e] border border-black/5 dark:border-white/5 rounded-xl p-5 mb-6">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Últimos Pedidos</h2>
-            <p className="text-xs text-gray-500">Actividad reciente</p>
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-white">{t('admin.dash.recent')}</h2>
+            <p className="text-xs text-gray-500">{t('admin.dash.recent.subtitle')}</p>
           </div>
         </div>
         <div className="overflow-x-auto">
@@ -313,16 +317,16 @@ export default function AdminDashboard() {
             <thead>
               <tr className="text-gray-500 text-xs uppercase border-b border-black/5 dark:border-white/5">
                 <th className="pb-3 text-left w-[15%]">ID</th>
-                <th className="pb-3 text-center w-[30%]">Cliente</th>
-                <th className="pb-3 text-center w-[20%]">Items</th>
-                <th className="pb-3 text-center w-[20%]">Monto</th>
-                <th className="pb-3 text-center w-[15%]">Estado</th>
+                <th className="pb-3 text-center w-[30%]">{t('admin.dash.table.client')}</th>
+                <th className="pb-3 text-center w-[20%]">{t('admin.dash.table.items')}</th>
+                <th className="pb-3 text-center w-[20%]">{t('admin.dash.table.amount')}</th>
+                <th className="pb-3 text-center w-[15%]">{t('admin.dash.table.status')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
               {ultimosPedidos.length === 0 ? (
                  <tr>
-                   <td colSpan="5" className="py-4 text-center text-gray-500">No hay pedidos recientes</td>
+                   <td colSpan="5" className="py-4 text-center text-gray-500">{t('admin.dash.no_recent_orders')}</td>
                  </tr>
               ) : ultimosPedidos.map((p) => (
                 <tr key={p.id} className="hover:bg-white/2 transition">
@@ -331,7 +335,7 @@ export default function AdminDashboard() {
                   <td className="py-3 text-center text-slate-600 dark:text-gray-300">{p.producto}</td>
                   <td className="py-3 text-center text-slate-900 dark:text-white font-medium">{p.monto}</td>
                   <td className="py-3 text-center">
-                    <span className={`px-2 py-1 rounded-md text-xs font-medium ${estadoColor[p.estado] || estadoColor['Pendiente']}`}>
+                    <span className={`px-2 py-1 rounded-md text-xs font-medium ${estadoColor[(p.estadoOriginal || '').toLowerCase()] || estadoColor['pendiente']}`}>
                       {p.estado}
                     </span>
                   </td>
@@ -348,12 +352,12 @@ export default function AdminDashboard() {
         {/* Actividad Reciente */}
         <div className="bg-white dark:bg-[#1a1d2e] border border-black/5 dark:border-white/5 rounded-xl p-5">
           <div className="mb-4">
-            <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Actividad Reciente</h2>
-            <p className="text-xs text-gray-500">Últimas transacciones</p>
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-white">{t('admin.dash.recent_activity')}</h2>
+            <p className="text-xs text-gray-500">{t('admin.dash.recent_activity.subtitle')}</p>
           </div>
           <div className="space-y-3">
             {actividadReciente.length === 0 ? (
-               <p className="text-sm text-gray-500 text-center py-4">No hay actividad reciente</p>
+               <p className="text-sm text-gray-500 text-center py-4">{t('admin.dash.no_recent_activity')}</p>
             ) : actividadReciente.map((item, i) => (
               <div key={i} className="flex items-center justify-between bg-black/5 dark:bg-white/5 rounded-xl px-4 py-3">
                 <div>
@@ -381,19 +385,19 @@ export default function AdminDashboard() {
               <svg className="w-4 h-4 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
-              <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Alertas de Stock Bajo</h2>
+              <h2 className="text-sm font-semibold text-slate-900 dark:text-white">{t('admin.dash.stock_alerts')}</h2>
             </div>
-            <p className="text-xs text-gray-500 mt-1">Productos críticos</p>
+            <p className="text-xs text-gray-500 mt-1">{t('admin.dash.stock_alerts.subtitle')}</p>
           </div>
           <div className="space-y-4">
             {alertasStock.length === 0 ? (
-               <p className="text-sm text-gray-500 text-center py-4">Inventario saludable, no hay alertas</p>
+               <p className="text-sm text-gray-500 text-center py-4">{t('admin.dash.no_stock_alerts')}</p>
             ) : alertasStock.map((item, i) => (
               <div key={i}>
                 <div className="flex items-center justify-between mb-1">
                   <p className="text-sm font-medium text-slate-900 dark:text-white">{item.producto}</p>
                   <span className="text-xs bg-red-500/20 text-red-400 px-2 py-0.5 rounded-full font-medium">
-                    {item.stock} uni.
+                    {item.stock} {t('admin.dash.units_short')}
                   </span>
                 </div>
                 {/* Barra de progreso */}
@@ -403,7 +407,7 @@ export default function AdminDashboard() {
                     style={{ width: `${item.porcentaje}%` }}
                   />
                 </div>
-                <p className="text-xs text-gray-500 mt-1">Mínimo requerido: {item.minimo} unidades</p>
+                <p className="text-xs text-gray-500 mt-1">{t('admin.dash.min_required')} {item.minimo} {t('admin.dash.units')}</p>
               </div>
             ))}
           </div>

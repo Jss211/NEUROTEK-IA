@@ -2,37 +2,70 @@ import { useState, useEffect } from 'react'
 import AdminLayout from '../../components/admin/AdminLayout'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
+import { useConfig } from '../../context/ConfigContext'
 
 const estadoStyle = {
   Completada: 'bg-green-500/20 text-green-400 border border-green-500/30',
   Pendiente:  'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30',
-  Procesando: 'bg-primary/20 text-primary/80 border border-primary/30',
+  Procesando: 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30',
   Cancelada:  'bg-red-500/20 text-red-400 border border-red-500/30',
+}
+
+function Avatar({ nombre, size = 'sm', imagen = null }) {
+  const iniciales = nombre.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
+  const colores = ['bg-primary', 'bg-purple-500', 'bg-green-500', 'bg-orange-500', 'bg-pink-500', 'bg-teal-500']
+  const color = colores[nombre.charCodeAt(0) % colores.length]
+  const sz = size === 'sm' ? 'w-8 h-8 text-xs' : 'w-10 h-10 text-sm'
+  
+  if (imagen) {
+    return <img src={imagen} alt={nombre} className={`${sz} rounded-full object-cover shrink-0 ring-2 ring-primary/20`} />
+  }
+
+  return (
+    <div className={`${sz} ${color} rounded-full flex items-center justify-center font-bold text-slate-900 dark:text-white shrink-0 ring-2 ring-primary/20`}>
+      {iniciales}
+    </div>
+  )
 }
 
 export default function Ordenes() {
   const { user } = useAuth()
+  const { t, formatPrice } = useConfig()
   const [filtro, setFiltro] = useState('')
   const [filtroEstado, setFiltroEstado] = useState('')
+  const [dropdownOpen, setDropdownOpen] = useState(false)
   const [detalleOrden, setDetalleOrden] = useState(null)
   const [ordenes, setOrdenes] = useState([])
+  const [productosDB, setProductosDB] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     async function fetchOrdenes() {
       setLoading(true)
-      const { data, error } = await supabase
+      const { data: ordenesData, error } = await supabase
         .from('ordenes')
         .select('*')
         .order('fecha', { ascending: false })
       
-      if (!error && data) {
-        setOrdenes(data)
+      const { data: usuariosData } = await supabase.from('usuarios').select('id, avatar_url');
+      
+      if (!error && ordenesData) {
+        const ordenesConAvatar = ordenesData.map(o => {
+           const u = usuariosData?.find(user => user.id === o.cliente_id);
+           return { ...o, avatar_url: u?.avatar_url || null };
+        });
+        setOrdenes(ordenesConAvatar)
       }
       setLoading(false)
     }
 
+    async function fetchProductos() {
+      const { data } = await supabase.from('productos').select('id, nombre, imagen_url')
+      if (data) setProductosDB(data)
+    }
+
     fetchOrdenes()
+    fetchProductos()
 
     const channel = supabase.channel('ordenes_changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'ordenes' }, () => {
@@ -75,15 +108,15 @@ export default function Ordenes() {
     <AdminLayout>
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Órdenes</h1>
-        <p className="text-slate-500 dark:text-gray-400 text-sm mt-1">Gestión de pedidos y ventas</p>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t('admin.ord.title')}</h1>
+        <p className="text-slate-500 dark:text-gray-400 text-sm mt-1">{t('admin.ord.subtitle')}</p>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <div className="bg-white dark:bg-[#1a1d2e] border border-black/5 dark:border-white/5 rounded-xl p-5 flex items-center justify-between">
           <div>
-            <p className="text-xs text-slate-500 dark:text-gray-400 uppercase tracking-wider mb-1">Órdenes Totales</p>
+            <p className="text-xs text-slate-500 dark:text-gray-400 uppercase tracking-wider mb-1">{t('admin.ord.stats.total')}</p>
             <div className="flex items-baseline gap-2">
               <p className="text-3xl font-bold text-slate-900 dark:text-white">{totalOrdenes}</p>
               <span className="text-xs text-green-400 flex items-center gap-0.5">
@@ -101,9 +134,9 @@ export default function Ordenes() {
 
         <div className="bg-white dark:bg-[#1a1d2e] border border-black/5 dark:border-white/5 rounded-xl p-5 flex items-center justify-between">
           <div>
-            <p className="text-xs text-slate-500 dark:text-gray-400 uppercase tracking-wider mb-1">Ventas Hoy</p>
+            <p className="text-xs text-slate-500 dark:text-gray-400 uppercase tracking-wider mb-1">{t('admin.ord.stats.sales_today')}</p>
             <div className="flex items-baseline gap-2">
-              <p className="text-3xl font-bold text-slate-900 dark:text-white">S/ {ventasHoy.toLocaleString()}</p>
+              <p className="text-3xl font-bold text-slate-900 dark:text-white">{formatPrice(ventasHoy)}</p>
               <span className="text-xs text-green-400 flex items-center gap-0.5">
                 <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
                 +23%
@@ -119,7 +152,7 @@ export default function Ordenes() {
 
         <div className="bg-white dark:bg-[#1a1d2e] border border-black/5 dark:border-white/5 rounded-xl p-5 flex items-center justify-between">
           <div>
-            <p className="text-xs text-slate-500 dark:text-gray-400 uppercase tracking-wider mb-1">Pendientes</p>
+            <p className="text-xs text-slate-500 dark:text-gray-400 uppercase tracking-wider mb-1">{t('admin.ord.stats.pending')}</p>
             <div className="flex items-baseline gap-2">
               <p className="text-3xl font-bold text-slate-900 dark:text-white">{pendientes}</p>
               <span className="text-xs text-red-400 flex items-center gap-0.5">
@@ -139,8 +172,8 @@ export default function Ordenes() {
       {/* Tabla */}
       <div className="bg-white dark:bg-[#1a1d2e] border border-black/5 dark:border-white/5 rounded-xl">
         <div className="p-5 border-b border-black/5 dark:border-white/5">
-          <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Órdenes Recientes</h2>
-          <p className="text-xs text-gray-500 mt-0.5">Historial de pedidos y transacciones</p>
+          <h2 className="text-sm font-semibold text-slate-900 dark:text-white">{t('admin.ord.table.title')}</h2>
+          <p className="text-xs text-gray-500 mt-0.5">{t('admin.ord.table.subtitle')}</p>
         </div>
 
         {/* Filtros */}
@@ -151,23 +184,54 @@ export default function Ordenes() {
             </svg>
             <input
               type="text"
-              placeholder="Buscar por cliente o ID..."
+              placeholder={t('admin.ord.search')}
               value={filtro}
               onChange={e => setFiltro(e.target.value)}
               className="bg-transparent text-sm text-gray-300 placeholder-gray-500 outline-none w-full"
             />
           </div>
-          <select
-            value={filtroEstado}
-            onChange={e => setFiltroEstado(e.target.value)}
-            className="bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-600 dark:text-gray-300 outline-none cursor-pointer"
-          >
-            <option className="bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white" value="">Todos los estados</option>
-            <option className="bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white" value="Completada">Completada</option>
-            <option className="bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white" value="Pendiente">Pendiente</option>
-            <option className="bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white" value="Procesando">Procesando</option>
-            <option className="bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white" value="Cancelada">Cancelada</option>
-          </select>
+          {/* Custom dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setDropdownOpen(o => !o)}
+              className="flex items-center gap-2 bg-white dark:bg-[#1a1d2e] border border-black/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-600 dark:text-gray-300 min-w-[150px] justify-between"
+            >
+              <span>
+                {filtroEstado === '' && t('admin.ord.filter.all_states')}
+                {filtroEstado === 'Completada' && t('admin.dash.status.completada')}
+                {filtroEstado === 'Pendiente' && t('admin.dash.status.pendiente')}
+                {filtroEstado === 'Procesando' && t('admin.dash.status.procesando')}
+                {filtroEstado === 'Cancelada' && t('admin.dash.status.cancelada')}
+              </span>
+              <svg className={`w-4 h-4 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {dropdownOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setDropdownOpen(false)} />
+                <div className="absolute right-0 mt-1 z-20 bg-white dark:bg-[#1a1d2e] border border-black/10 dark:border-white/10 rounded-xl overflow-hidden shadow-xl min-w-[150px]">
+                  {[
+                    { label: t('admin.ord.filter.all_states'), value: '' },
+                    { label: t('admin.dash.status.completada'), value: 'Completada' },
+                    { label: t('admin.dash.status.pendiente'), value: 'Pendiente' },
+                    { label: t('admin.dash.status.procesando'), value: 'Procesando' },
+                    { label: t('admin.dash.status.cancelada'), value: 'Cancelada' },
+                  ].map((op) => (
+                    <button
+                      key={op.value}
+                      onClick={() => { setFiltroEstado(op.value); setDropdownOpen(false) }}
+                      className={`w-full text-left px-4 py-2.5 text-sm transition hover:bg-primary/10 hover:text-primary ${
+                        filtroEstado === op.value ? 'text-primary font-semibold' : 'text-slate-600 dark:text-gray-300'
+                      }`}
+                    >
+                      {op.label}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Tabla */}
@@ -175,26 +239,26 @@ export default function Ordenes() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-black/5 dark:border-white/5">
-                <th className="text-left px-5 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium w-[14%]">Orden</th>
-                <th className="text-left px-5 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium w-[22%]">Cliente</th>
-                <th className="text-center px-5 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium w-[16%]">Fecha</th>
-                <th className="text-center px-5 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium w-[10%]">Items</th>
-                <th className="text-center px-5 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium w-[16%]">Total</th>
-                <th className="text-center px-5 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium w-[14%]">Estado</th>
-                <th className="text-center px-5 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium w-[8%]">Acciones</th>
+                <th className="text-left px-5 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium w-[14%]">{t('admin.ord.table.col_order')}</th>
+                <th className="text-left px-5 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium w-[22%]">{t('admin.ord.table.col_client')}</th>
+                <th className="text-center px-5 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium w-[16%]">{t('admin.ord.table.col_date')}</th>
+                <th className="text-center px-5 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium w-[10%]">{t('admin.ord.table.col_items')}</th>
+                <th className="text-center px-5 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium w-[16%]">{t('admin.ord.table.col_total')}</th>
+                <th className="text-center px-5 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium w-[14%]">{t('admin.ord.table.col_status')}</th>
+                <th className="text-center px-5 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium w-[8%]">{t('admin.ord.table.col_actions')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
               {loading ? (
                 <tr>
                   <td colSpan="7" className="px-5 py-8 text-center text-gray-500">
-                    Cargando órdenes...
+                    {t('admin.ord.loading')}
                   </td>
                 </tr>
               ) : ordenesFiltradas.length === 0 ? (
                 <tr>
                   <td colSpan="7" className="px-5 py-8 text-center text-gray-500">
-                    No se encontraron órdenes registradas.
+                    {t('admin.ord.empty')}
                   </td>
                 </tr>
               ) : (
@@ -205,25 +269,23 @@ export default function Ordenes() {
                     </td>
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 bg-primary rounded-full flex items-center justify-center text-xs font-bold text-slate-900 dark:text-white shrink-0">
-                          {(o.cliente_nombre || o.cliente || 'SN').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
-                        </div>
-                        <span className="text-slate-900 dark:text-white text-sm">{o.cliente_nombre || o.cliente}</span>
+                        <Avatar nombre={o.cliente_nombre || o.cliente || 'SN'} imagen={o.avatar_url} size="sm" />
+                        <span className="text-slate-900 dark:text-white font-medium">{o.cliente_nombre || o.cliente || 'SN'}</span>
                       </div>
                     </td>
                     <td className="px-5 py-4 text-center text-slate-500 dark:text-gray-400 text-sm">{new Date(o.fecha).toLocaleDateString()}</td>
                     <td className="px-5 py-4 text-center text-gray-300 text-sm font-medium">{o.items}</td>
-                    <td className="px-5 py-4 text-center text-slate-900 dark:text-white font-semibold text-sm">S/ {(parseFloat(o.total) || 0).toFixed(2)}</td>
+                    <td className="px-5 py-4 text-center text-slate-900 dark:text-white font-semibold text-sm">{formatPrice(parseFloat(o.total) || 0)}</td>
                     <td className="px-5 py-4 text-center">
                       <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${estadoStyle[o.estado] || estadoStyle['Pendiente']}`}>
-                        {o.estado}
+                        {t('admin.dash.status.' + o.estado.toLowerCase()) || o.estado}
                       </span>
                     </td>
                     <td className="px-5 py-4 text-center">
                       <button
                         onClick={() => setDetalleOrden(o)}
                         className="text-primary/80 hover:text-blue-300 transition p-1"
-                        title="Ver detalle"
+                        title={t('admin.ord.view_detail')}
                       >
                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -240,7 +302,7 @@ export default function Ordenes() {
 
         <div className="px-5 py-3 border-t border-black/5 dark:border-white/5">
           <p className="text-xs text-gray-500">
-            Mostrando {ordenesFiltradas.length} de {ordenes.length} órdenes
+            {t('admin.ord.footer.showing')} {ordenesFiltradas.length} {t('admin.ord.footer.of')} {ordenes.length} {t('admin.ord.footer.orders')}
           </p>
         </div>
       </div>
@@ -252,7 +314,7 @@ export default function Ordenes() {
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-black/5 dark:border-white/5">
               <div>
-                <h2 className="text-slate-900 dark:text-white font-bold">Orden #{detalleOrden.id.toString().substring(0,8)}</h2>
+                <h2 className="text-slate-900 dark:text-white font-bold">{t('admin.ord.modal.title')} #{detalleOrden.id.toString().substring(0,8)}</h2>
                 <p className="text-xs text-gray-500 mt-0.5">{new Date(detalleOrden.fecha).toLocaleDateString()}</p>
               </div>
               <button onClick={() => setDetalleOrden(null)} className="text-slate-500 dark:text-gray-400 hover:text-slate-900 dark:text-white transition">
@@ -273,41 +335,48 @@ export default function Ordenes() {
                   <p className="text-xs text-gray-500 truncate">{detalleOrden.cliente_email || detalleOrden.email}</p>
                 </div>
                 <span className={`ml-auto text-xs font-semibold px-2.5 py-1 rounded-full ${estadoStyle[detalleOrden.estado] || estadoStyle['Pendiente']}`}>
-                  {detalleOrden.estado}
+                  {t('admin.dash.status.' + detalleOrden.estado.toLowerCase()) || detalleOrden.estado}
                 </span>
               </div>
 
               {/* Productos */}
               <div className="bg-slate-100 dark:bg-white/5 rounded-xl p-4 max-h-48 overflow-y-auto">
-                <p className="text-xs text-slate-500 dark:text-gray-400 mb-3 font-medium uppercase tracking-wider">Productos ({detalleOrden.items})</p>
+                <p className="text-xs text-slate-500 dark:text-gray-400 mb-3 font-medium uppercase tracking-wider">{t('admin.ord.modal.products')} ({detalleOrden.items})</p>
                 <div className="space-y-2">
-                  {detalleOrden.productos && Array.isArray(detalleOrden.productos) ? detalleOrden.productos.map((prod, i) => (
+                  {detalleOrden.productos && Array.isArray(detalleOrden.productos) ? detalleOrden.productos.map((prod, i) => {
+                    const imgUrl = prod.imagen_url || productosDB.find(p => p.id === prod.id || p.nombre === (prod.nombre || prod))?.imagen_url;
+                    return (
                     <div key={i} className="flex items-center gap-2">
-                      <div className="w-5 h-5 bg-primary/20 rounded flex items-center justify-center shrink-0">
-                        <svg className="w-3 h-3 text-primary/80" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10" />
-                        </svg>
+                      <div className="w-6 h-6 bg-slate-50 dark:bg-[#0f1117] border border-black/5 dark:border-white/5 rounded flex items-center justify-center shrink-0 overflow-hidden">
+                        {imgUrl ? (
+                          <img src={imgUrl} alt={prod.nombre || 'Producto'} className="w-full h-full object-contain p-0.5" />
+                        ) : (
+                          <svg className="w-3 h-3 text-primary/80" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10" />
+                          </svg>
+                        )}
                       </div>
                       <span className="text-sm text-slate-700 dark:text-gray-300 font-medium line-clamp-1">{prod.nombre || prod}</span>
                       {prod.cantidad && (
                         <span className="text-xs text-slate-500 ml-auto">x{prod.cantidad}</span>
                       )}
                     </div>
-                  )) : (
-                    <p className="text-sm text-gray-500">Detalles no disponibles</p>
+                    )
+                  }) : (
+                    <p className="text-sm text-gray-500">{t('admin.ord.modal.no_details')}</p>
                   )}
                 </div>
               </div>
 
               {/* Total */}
               <div className="flex items-center justify-between bg-primary/10 border border-primary/20 rounded-xl px-4 py-3">
-                <span className="text-sm text-primary font-bold">Total de la orden</span>
-                <span className="text-xl font-bold text-slate-900 dark:text-white">S/ {detalleOrden.total.toFixed(2)}</span>
+                <span className="text-sm text-primary font-bold">{t('admin.ord.modal.total')}</span>
+                <span className="text-xl font-bold text-slate-900 dark:text-white">{formatPrice(detalleOrden.total)}</span>
               </div>
 
               {/* Cambiar estado */}
               <div>
-                <p className="text-xs text-slate-500 dark:text-gray-400 mb-2 font-medium">Cambiar estado</p>
+                <p className="text-xs text-slate-500 dark:text-gray-400 mb-2 font-medium">{t('admin.ord.modal.change_status')}</p>
                 <div className="grid grid-cols-2 gap-2">
                   {['Pendiente', 'Procesando', 'Completada', 'Cancelada'].map(estado => (
                     <button
@@ -319,7 +388,7 @@ export default function Ordenes() {
                           : 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-gray-400 hover:bg-slate-200 dark:hover:bg-white/10'
                       }`}
                     >
-                      {estado}
+                      {t('admin.dash.status.' + estado.toLowerCase()) || estado}
                     </button>
                   ))}
                 </div>
@@ -329,7 +398,7 @@ export default function Ordenes() {
                 onClick={() => setDetalleOrden(null)}
                 className="w-full bg-slate-800 hover:bg-slate-900 dark:bg-slate-700 dark:hover:bg-slate-600 text-white font-semibold py-2.5 rounded-xl transition text-sm"
               >
-                Cerrar
+                {t('admin.ord.modal.close')}
               </button>
             </div>
           </div>

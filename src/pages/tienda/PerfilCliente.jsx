@@ -14,6 +14,8 @@ export default function PerfilCliente() {
   const [saving, setSaving] = useState(false);
   const [stats, setStats] = useState({ totalOrdenes: 0, totalGastado: 0 });
   const [loadingStats, setLoadingStats] = useState(true);
+  const [wishlist, setWishlist] = useState([]);
+  const [loadingWishlist, setLoadingWishlist] = useState(true);
   const [toast, setToast] = useState(null); 
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
@@ -23,8 +25,33 @@ export default function PerfilCliente() {
       setTelefono(user.user_metadata?.phone || '');
       setAvatarUrl(user.user_metadata?.avatar_url || '');
       fetchStats();
+      fetchWishlist(user.id);
     }
   }, [user]);
+
+  async function fetchWishlist(userId) {
+    setLoadingWishlist(true);
+    const { data, error } = await supabase
+      .from('wishlist')
+      .select(`
+        id,
+        productos (
+          id,
+          nombre,
+          precio,
+          precio_oferta,
+          en_oferta,
+          imagen_url
+        )
+      `)
+      .eq('usuario_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (!error && data) {
+      setWishlist(data.map(item => item.productos).filter(Boolean));
+    }
+    setLoadingWishlist(false);
+  }
 
   useEffect(() => {
     if (toast) {
@@ -57,7 +84,15 @@ export default function PerfilCliente() {
         data: { avatar_url: publicUrl },
       });
 
-      if (updateError) throw updateError;
+      // Sync with public 'usuarios' table
+      const { data: existingUser } = await supabase.from('usuarios').select('rol, estado').eq('id', user.id).single();
+      await supabase.from('usuarios').upsert({
+        id: user.id,
+        avatar_url: publicUrl,
+        email: user.email,
+        rol: existingUser?.rol || 'cliente',
+        estado: existingUser?.estado || 'Activo'
+      });
       
       setAvatarUrl(publicUrl);
       setToast({ type: 'success', message: 'Foto de perfil actualizada.' });
@@ -99,6 +134,18 @@ export default function PerfilCliente() {
     if (error) {
       setToast({ type: 'error', message: 'Error al guardar los cambios. Intenta de nuevo.' });
     } else {
+      // Sync with public 'usuarios' table
+      const { data: existingUser } = await supabase.from('usuarios').select('rol, estado').eq('id', user.id).single();
+      await supabase.from('usuarios').upsert({
+        id: user.id,
+        nombre: nombre.trim(),
+        telefono: telefono.trim(),
+        avatar_url: avatarUrl || user?.user_metadata?.avatar_url || null,
+        email: user?.email,
+        rol: existingUser?.rol || 'cliente',
+        estado: existingUser?.estado || 'Activo'
+      });
+      
       setToast({ type: 'success', message: 'Perfil actualizado correctamente.' });
     }
     setSaving(false);
@@ -252,7 +299,7 @@ export default function PerfilCliente() {
                       </svg>
                     </div>
                     <div>
-                      <p className="text-2xl font-bold text-slate-900 dark:text-white">${stats.totalGastado.toFixed(2)}</p>
+                      <p className="text-2xl font-bold text-slate-900 dark:text-white">S/ {stats.totalGastado.toFixed(2)}</p>
                       <p className="text-xs text-slate-500 font-medium">Total gastado</p>
                     </div>
                   </div>
@@ -386,34 +433,59 @@ export default function PerfilCliente() {
               </form>
             </div>
 
-            {/* Seguridad Card */}
+
+
+            {/* Wishlist Card */}
             <div className="mt-8 bg-white dark:bg-[#13151f] border border-black/5 dark:border-white/5 rounded-2xl shadow-sm overflow-hidden">
               <div className="p-6 border-b border-black/5 dark:border-white/5">
                 <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <svg className="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  <svg className="w-5 h-5 text-pink-500" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                   </svg>
-                  Seguridad de la Cuenta
+                  Mi Lista de Deseos
                 </h3>
               </div>
               <div className="p-6">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
-                  <div>
-                    <h4 className="font-semibold text-slate-900 dark:text-white">Contraseña</h4>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                      Si necesitas cambiar tu contraseña, enviaremos un enlace a tu correo.
-                    </p>
+                {loadingWishlist ? (
+                  <div className="animate-pulse space-y-4">
+                    <div className="h-16 bg-slate-100 dark:bg-slate-800 rounded-xl"></div>
+                    <div className="h-16 bg-slate-100 dark:bg-slate-800 rounded-xl"></div>
                   </div>
-                  <button
-                    onClick={async () => {
-                      setToast({ type: 'success', message: 'Enlace enviado a tu correo.' });
-                      await supabase.auth.resetPasswordForEmail(email);
-                    }}
-                    className="shrink-0 px-4 py-2 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-900 dark:text-white font-medium rounded-lg transition-colors border border-slate-300 dark:border-slate-600"
-                  >
-                    Restablecer Contraseña
-                  </button>
-                </div>
+                ) : wishlist.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {wishlist.map(prod => (
+                      <div key={prod.id} className="flex gap-4 p-3 border border-slate-200 dark:border-slate-800 rounded-xl items-center bg-slate-50 dark:bg-slate-900/50">
+                        <div className="w-16 h-16 shrink-0 bg-white dark:bg-black/20 rounded-lg overflow-hidden flex items-center justify-center">
+                          {prod.imagen_url ? (
+                            <img src={prod.imagen_url} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-6 h-6 bg-slate-200 dark:bg-slate-700"></div>
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-slate-900 dark:text-white text-sm line-clamp-1">{prod.nombre}</h4>
+                          <p className="text-primary font-bold text-sm mt-1">S/ {(prod.en_oferta ? prod.precio_oferta : prod.precio).toFixed(2)}</p>
+                        </div>
+                        <button
+                          onClick={() => navigate(`/tienda/producto/${prod.id}`)}
+                          className="p-2 bg-primary/10 text-primary rounded-lg hover:bg-primary hover:text-white transition-colors"
+                          title="Ver producto"
+                        >
+                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <svg className="w-12 h-12 text-slate-300 dark:text-slate-700 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                    </svg>
+                    <p className="text-slate-500 dark:text-slate-400 text-sm">No tienes productos en tu lista de deseos.</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>

@@ -2,13 +2,16 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import TiendaLayout from '../../components/tienda/TiendaLayout';
 import { useTienda } from '../../context/TiendaContext';
+import { useConfig } from '../../context/ConfigContext';
 import { useAuth } from '../../context/AuthContext';
 
 export default function Carrito() {
   const { carrito, removerDelCarrito, actualizarCantidad, totalCarrito, realizarCompra, comprando } = useTienda();
+  const { formatPrice, getLocalized } = useConfig();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [compraExitosa, setCompraExitosa] = useState(false);
+  const [itemsComprados, setItemsComprados] = useState([]);
   const [errorCompra, setErrorCompra] = useState('');
 
   const handleComprar = async () => {
@@ -20,6 +23,7 @@ export default function Carrito() {
     }
     if (resultado.success) {
       setCompraExitosa(true);
+      setItemsComprados(resultado.items || []);
     } else {
       setErrorCompra(resultado.error || 'Error al procesar la compra');
     }
@@ -36,20 +40,53 @@ export default function Carrito() {
         </div>
 
         {compraExitosa ? (
-          <div className="bg-white dark:bg-slate-800 rounded-2xl p-12 shadow-sm border border-slate-200 dark:border-slate-700 text-center">
-            <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6 animate-bounce">
-              <svg className="w-10 h-10 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
+          <div className="space-y-8 animate-[slideIn_0.5s_ease-out]">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl p-12 shadow-sm border border-slate-200 dark:border-slate-700 text-center">
+              <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6 animate-bounce">
+                <svg className="w-10 h-10 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">¡Compra realizada!</h2>
+              <p className="text-slate-500 dark:text-slate-400 mb-8 max-w-md mx-auto">Tu orden ha sido creada exitosamente.</p>
+              
+              {/* SECCIÓN DE SOLICITUD DE RESEÑA REUBICADA */}
+              {itemsComprados.length > 0 && (
+                <div className="bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-6 sm:p-8 mb-8 border border-slate-200 dark:border-slate-700 max-w-3xl mx-auto">
+                  <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">¿Satisfecho con tu compra?</h3>
+                  <p className="text-slate-500 dark:text-slate-400 mb-6">Ayuda a otros gamers dejando tus comentarios y unas estrellas sobre los productos que acabas de adquirir.</p>
+                  
+                  <div className="flex flex-col gap-4">
+                    {itemsComprados.map(item => (
+                      <div key={item.id} className="bg-white dark:bg-slate-800 rounded-xl p-4 flex items-center justify-between gap-4 border border-slate-200 dark:border-slate-700 shadow-sm">
+                        <div className="flex items-center gap-4 text-left">
+                          <div className="w-16 h-16 bg-slate-100 dark:bg-slate-900 rounded-lg overflow-hidden shrink-0">
+                            <img src={item.imagen || item.imagen_url} alt={getLocalized(item, 'nombre')} className="w-full h-full object-cover" />
+                          </div>
+                          <h4 className="font-semibold text-slate-900 dark:text-white text-sm line-clamp-2">{getLocalized(item, 'nombre')}</h4>
+                        </div>
+                        <Link
+                          to={`/tienda/producto/${item.id}`}
+                          className="shrink-0 bg-yellow-400 hover:bg-yellow-500 text-slate-900 text-sm font-bold py-2.5 px-5 rounded-lg transition-all shadow-lg shadow-yellow-400/20 flex items-center gap-2"
+                        >
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                          </svg>
+                          Calificar
+                        </Link>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <Link 
+                to="/tienda/historial"
+                className="inline-block bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-900 dark:text-white font-medium px-8 py-3 rounded-xl transition-colors"
+              >
+                Ver mis compras
+              </Link>
             </div>
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">¡Compra realizada!</h2>
-            <p className="text-slate-500 dark:text-slate-400 mb-8 max-w-md mx-auto">Tu orden ha sido creada exitosamente. Puedes ver el estado y los detalles en tu historial de compras.</p>
-            <Link 
-              to="/tienda/historial"
-              className="inline-block bg-primary hover:bg-primary/90 text-white font-medium px-8 py-3 rounded-xl transition-colors"
-            >
-              Ver mis compras
-            </Link>
           </div>
         ) : carrito.length === 0 ? (
           <div className="bg-white dark:bg-slate-800 rounded-2xl p-16 shadow-sm border border-slate-200 dark:border-slate-700 text-center flex flex-col items-center">
@@ -72,13 +109,13 @@ export default function Carrito() {
               {carrito.map((item) => (
                 <div key={item.id} className="bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-6 shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row gap-6">
                   <div className="w-full sm:w-32 h-32 bg-slate-100 dark:bg-slate-900 rounded-xl overflow-hidden shrink-0">
-                    <img src={item.imagen || item.imagen_url} alt={item.nombre} className="w-full h-full object-cover" />
+                    <img src={item.imagen || item.imagen_url} alt={getLocalized(item, 'nombre')} className="w-full h-full object-cover" />
                   </div>
                   
                   <div className="flex-1 flex flex-col justify-between">
                     <div className="flex justify-between items-start gap-4">
                       <div>
-                        <h3 className="font-bold text-slate-900 dark:text-white text-lg line-clamp-2">{item.nombre}</h3>
+                        <h3 className="font-bold text-slate-900 dark:text-white text-lg line-clamp-2">{getLocalized(item, 'nombre')}</h3>
                         {item.categoria && (
                           <span className="text-sm text-slate-500 dark:text-slate-400 mt-1 block">{item.categoria}</span>
                         )}
@@ -112,7 +149,7 @@ export default function Carrito() {
                           +
                         </button>
                       </div>
-                      <p className="text-xl font-bold text-primary">${(item.precio * item.cantidad).toFixed(2)}</p>
+                      <p className="text-xl font-bold text-primary">{formatPrice(item.precio * item.cantidad)}</p>
                     </div>
                   </div>
                 </div>
@@ -126,7 +163,7 @@ export default function Carrito() {
                 <div className="space-y-4 mb-6">
                   <div className="flex justify-between text-slate-600 dark:text-slate-400">
                     <span>Subtotal ({cantidadCarrito} productos)</span>
-                    <span className="font-medium text-slate-900 dark:text-white">${totalCarrito.toFixed(2)}</span>
+                    <span className="font-medium text-slate-900 dark:text-white">{formatPrice(totalCarrito)}</span>
                   </div>
                   <div className="flex justify-between text-slate-600 dark:text-slate-400">
                     <span>Envío</span>
@@ -134,7 +171,7 @@ export default function Carrito() {
                   </div>
                   <div className="border-t border-slate-200 dark:border-slate-700 pt-4 flex justify-between items-center">
                     <span className="text-lg font-bold text-slate-900 dark:text-white">Total</span>
-                    <span className="text-2xl font-extrabold text-primary">${totalCarrito.toFixed(2)}</span>
+                    <span className="text-2xl font-extrabold text-primary">{formatPrice(totalCarrito)}</span>
                   </div>
                 </div>
 

@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
+import { useConfig } from '../../context/ConfigContext'
+import logoImg from '../../assets/neurotekIA.png';
 import Toast from '../Toast'
 
 const navItems = [
@@ -99,8 +101,10 @@ const navItems = [
 ]
 
 export default function AdminLayout({ children }) {
-  const { user } = useAuth()
   const navigate = useNavigate()
+  const { user } = useAuth()
+  const { t } = useConfig()
+  
   const [collapsed, setCollapsed] = useState(true)
   const [toast, setToast] = useState(null)
 
@@ -172,7 +176,7 @@ export default function AdminLayout({ children }) {
             localStorage.removeItem(key)
           }
         }
-        window.location.href = '/login'
+        window.location.href = '/tienda'
       }
     }, 1500)
   }
@@ -184,10 +188,8 @@ export default function AdminLayout({ children }) {
       <aside className="flex flex-col bg-white dark:bg-[#13151f] border-r border-black/5 dark:border-white/5 w-72 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         {/* Logo */}
         <div className="flex items-center gap-3 px-4 py-5 border-b border-black/5 dark:border-white/5">
-          <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shrink-0">
-            <svg className="w-6 h-6 text-slate-900 dark:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10" />
-            </svg>
+          <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0 flex items-center justify-center">
+            <img src={logoImg} alt="NeuroTek Logo" className="w-full h-full object-cover" />
           </div>
           <span className="font-bold text-slate-900 dark:text-white text-lg">NeuroTek</span>
         </div>
@@ -209,7 +211,7 @@ export default function AdminLayout({ children }) {
               <span className="shrink-0 w-6 h-6 flex items-center justify-center transition-transform duration-300 group-hover:scale-110 group-active:scale-95">
                 {item.icon}
               </span>
-              <span className="flex-1 text-[15px]">{item.label}</span>
+              <span className="flex-1 text-[15px]">{t(`admin.nav.${item.label.toLowerCase().replace('ó', 'o').normalize("NFD").replace(/[\u0300-\u036f]/g, "")}`)}</span>
               {item.to === '/admin/notificaciones' && notificaciones > 0 && (
                 <span className="min-w-[20px] h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 shadow-sm shadow-red-500/40">
                   {notificaciones}
@@ -217,6 +219,16 @@ export default function AdminLayout({ children }) {
               )}
             </NavLink>
           ))}
+          
+          {/* Botón para volver a la tienda */}
+          <div className="mt-auto px-4 pb-4 pt-8">
+            <a href="/tienda" className="flex items-center justify-center gap-2 w-full py-2.5 bg-primary/10 text-primary hover:bg-primary/20 rounded-xl transition font-semibold text-sm shadow-sm">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              Ver la Tienda
+            </a>
+          </div>
         </nav>
 
         {/* Usuario abajo */}
@@ -241,7 +253,7 @@ export default function AdminLayout({ children }) {
                 <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">{nombre}</p>
                 <p className="text-xs text-primary/80">Admin</p>
               </div>
-              <button onClick={handleLogout} title="Cerrar sesion" className="text-gray-500 hover:text-red-400 transition">
+              <button onClick={handleLogout} title={t('admin.nav.logout')} className="text-gray-500 hover:text-red-400 transition">
                 <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                 </svg>

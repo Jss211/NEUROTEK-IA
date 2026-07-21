@@ -3,19 +3,31 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import TiendaLayout from '../../components/tienda/TiendaLayout';
 import { supabase } from '../../lib/supabase';
 import { useTienda } from '../../context/TiendaContext';
+import { useAuth } from '../../context/AuthContext';
+import { Star } from 'lucide-react';
 
 export default function ProductoDetalle() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { agregarAlCarrito } = useTienda();
+  const { user } = useAuth();
 
   const [producto, setProducto] = useState(null);
   const [relacionados, setRelacionados] = useState([]);
+  const [reviews, setReviews] = useState([]);
+  const [isWishlisted, setIsWishlisted] = useState(false);
+  
+  // Formularios de reseña
+  const [nuevaResena, setNuevaResena] = useState('');
+  const [nuevoRating, setNuevoRating] = useState(5);
+  const [subiendoResena, setSubiendoResena] = useState(false);
   const [cantidad, setCantidad] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [imgError, setImgError] = useState(false);
   const [agregado, setAgregado] = useState(false);
+
+  const [haComprado, setHaComprado] = useState(false);
 
   useEffect(() => {
     fetchProducto();
@@ -53,7 +65,87 @@ export default function ProductoDetalle() {
       .limit(4);
 
     setRelacionados(related || []);
+    
+    // Fetch reviews
+    const { data: revs } = await supabase
+      .from('reviews')
+      .select('*')
+      .eq('producto_id', id)
+      .order('created_at', { ascending: false });
+    setReviews(revs || []);
+
+    // Check wishlist and purchases if user is logged in
+    const { data: sessionData } = await supabase.auth.getSession();
+    const currentUser = sessionData?.session?.user;
+    if (currentUser) {
+      const { data: wlData } = await supabase
+        .from('wishlist')
+        .select('id')
+        .eq('producto_id', id)
+        .eq('usuario_id', currentUser.id)
+        .maybeSingle();
+      if (wlData) setIsWishlisted(true);
+
+      // Check if user bought the product
+      const { data: ordenesData } = await supabase
+        .from('ordenes')
+        .select('productos')
+        .eq('cliente_id', currentUser.id);
+      
+      if (ordenesData) {
+        const bought = ordenesData.some(orden => 
+          Array.isArray(orden.productos) && orden.productos.some(p => p.id === id)
+        );
+        setHaComprado(bought);
+      }
+    }
+
     setLoading(false);
+  }
+
+  async function handleToggleWishlist() {
+    if (!user) {
+      alert("Inicia sesión para guardar productos en tu lista de deseos");
+      return;
+    }
+    if (isWishlisted) {
+      const { error } = await supabase.from('wishlist').delete().eq('producto_id', id).eq('usuario_id', user.id);
+      if (error) return alert("Error al quitar: " + error.message);
+      setIsWishlisted(false);
+    } else {
+      const { error } = await supabase.from('wishlist').insert({ producto_id: id, usuario_id: user.id });
+      if (error) return alert("Falta crear la tabla en Supabase: " + error.message);
+      setIsWishlisted(true);
+    }
+  }
+
+  async function handleEnviarResena(e) {
+    e.preventDefault();
+    if (!user) return alert("Inicia sesión para dejar una reseña");
+    if (!haComprado) return alert("Debes comprar el producto para dejar una reseña");
+    if (!nuevaResena.trim()) return alert("Escribe un comentario");
+    
+    setSubiendoResena(true);
+    const nombreUsuario = user.user_metadata?.full_name || 'Cliente';
+    const avatarUrl = user.user_metadata?.avatar_url || null;
+    
+    const { data, error } = await supabase.from('reviews').insert({
+      producto_id: id,
+      usuario_id: user.id,
+      nombre_usuario: nombreUsuario,
+      avatar_url: avatarUrl,
+      rating: nuevoRating,
+      comentario: nuevaResena,
+    }).select().single();
+
+    if (error) {
+      alert("Error al publicar la reseña (Probablemente falta crear la tabla en Supabase o añadir la columna avatar_url): " + error.message);
+    } else if (data) {
+      setReviews([data, ...reviews]);
+      setNuevaResena('');
+      setNuevoRating(5);
+    }
+    setSubiendoResena(false);
   }
 
   function handleAgregar() {
@@ -62,7 +154,7 @@ export default function ProductoDetalle() {
       agregarAlCarrito({
         id: producto.id,
         nombre: producto.nombre,
-        precio: producto.precio,
+        precio: producto.en_oferta ? producto.precio_oferta : producto.precio,
         imagen: producto.imagen_url,
       });
     }
@@ -201,13 +293,33 @@ export default function ProductoDetalle() {
             <h1 className="text-3xl lg:text-4xl font-bold text-slate-900 dark:text-white mb-4 leading-tight">
               {producto.nombre}
             </h1>
+            
+            {/* Offer Badge */}
+            {producto.en_oferta && (
+              <div className="mb-4">
+                <span className="inline-block bg-primary/10 border border-primary/20 text-primary text-xs font-black px-3 py-1.5 rounded-lg uppercase tracking-widest">
+                  OFERTA ESPECIAL
+                </span>
+              </div>
+            )}
 
             {/* Price */}
             <div className="flex items-baseline gap-3 mb-6">
-              <span className="text-4xl font-extrabold text-primary">
-                ${producto.precio.toFixed(2)}
-              </span>
-              <span className="text-sm text-slate-500 font-medium">USD</span>
+              {producto.en_oferta ? (
+                <>
+                  <span className="text-4xl font-extrabold text-primary">
+                    S/ {producto.precio_oferta.toFixed(2)}
+                  </span>
+                  <span className="text-xl text-slate-400 font-medium line-through">
+                    S/ {producto.precio.toFixed(2)}
+                  </span>
+                </>
+              ) : (
+                <span className="text-4xl font-extrabold text-primary">
+                  S/ {producto.precio.toFixed(2)}
+                </span>
+              )}
+              <span className="text-sm text-slate-500 font-medium">PEN</span>
             </div>
 
             {/* Description */}
@@ -269,40 +381,155 @@ export default function ProductoDetalle() {
                 </div>
               )}
 
-              <button
-                onClick={handleAgregar}
-                disabled={sinStock}
-                className={`w-full py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all duration-300 ${
-                  sinStock
-                    ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed'
-                    : agregado
-                    ? 'bg-green-500 text-white shadow-lg shadow-green-500/25'
-                    : 'bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/25 hover:shadow-primary/40 hover:-translate-y-1'
-                }`}
-              >
-                {agregado ? (
-                  <>
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                    </svg>
-                    ¡Añadido al carrito!
-                  </>
-                ) : sinStock ? (
-                  <>
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    Agotado
-                  </>
+              <div className="flex gap-4 w-full">
+                <button
+                  onClick={handleAgregar}
+                  disabled={sinStock}
+                  className={`flex-grow py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all duration-300 ${
+                    sinStock
+                      ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed'
+                      : agregado
+                      ? 'bg-green-500 text-white shadow-lg shadow-green-500/25'
+                      : 'bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/25 hover:shadow-primary/40 hover:-translate-y-1'
+                  }`}
+                >
+                  {agregado ? (
+                    <>
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                      </svg>
+                      ¡Añadido al carrito!
+                    </>
+                  ) : sinStock ? (
+                    <>
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Agotado
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                      </svg>
+                      Añadir {cantidad} al Carrito
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={handleToggleWishlist}
+                  className={`w-14 h-14 rounded-xl flex items-center justify-center transition-all flex-shrink-0 ${
+                    isWishlisted
+                      ? 'bg-pink-500/10 text-pink-500 border border-pink-500/50 shadow-[0_0_15px_rgba(236,72,153,0.3)]'
+                      : 'bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-pink-500 hover:bg-pink-500/10 hover:border-pink-500/30'
+                  }`}
+                  title={isWishlisted ? "Quitar de Lista de Deseos" : "Agregar a Lista de Deseos"}
+                >
+                  <svg className="w-6 h-6" fill={isWishlisted ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={isWishlisted ? 1 : 2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* REVIEWS */}
+        <div className="border-t border-slate-200 dark:border-slate-800 pt-12 mb-16">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+            <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Reseñas de Clientes ({reviews.length})</h2>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+            {/* Formulario de Reseña */}
+            <div className="lg:col-span-1 bg-slate-50 dark:bg-slate-900/50 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 h-fit">
+              <h3 className="font-bold text-lg mb-4 text-slate-900 dark:text-white">Dejar una reseña</h3>
+              {user ? (
+                haComprado ? (
+                  <form onSubmit={handleEnviarResena} className="flex flex-col gap-4">
+                    <div>
+                      <label className="text-sm text-slate-500 mb-2 block">Calificación</label>
+                      <div className="flex gap-2">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <button
+                            key={star}
+                            type="button"
+                            onClick={() => setNuevoRating(star)}
+                            className="focus:outline-none transition-transform hover:scale-110"
+                          >
+                            <Star className={`w-6 h-6 ${star <= nuevoRating ? 'text-yellow-400 fill-yellow-400' : 'text-slate-300 dark:text-slate-700'}`} />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-sm text-slate-500 mb-2 block">Comentario</label>
+                      <textarea
+                        value={nuevaResena}
+                        onChange={(e) => setNuevaResena(e.target.value)}
+                        className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+                        rows="4"
+                        placeholder="¿Qué te pareció este producto?"
+                        required
+                      ></textarea>
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={subiendoResena}
+                      className="w-full bg-primary hover:bg-primary/90 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-primary/20"
+                    >
+                      {subiendoResena ? 'Publicando...' : 'Publicar Reseña'}
+                    </button>
+                  </form>
                 ) : (
-                  <>
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-                    </svg>
-                    Añadir {cantidad} al Carrito
-                  </>
-                )}
-              </button>
+                  <div className="text-center py-6">
+                    <p className="text-slate-500 dark:text-slate-400 mb-4 text-sm">
+                      Solo los clientes que han comprado este producto pueden dejar una reseña. ¡Adquiérelo para compartir tu opinión!
+                    </p>
+                  </div>
+                )
+              ) : (
+                <div className="text-center py-6">
+                  <p className="text-slate-500 dark:text-slate-400 mb-4 text-sm">Debes iniciar sesión para dejar una reseña en este producto.</p>
+                  <Link to="/login" className="text-primary font-bold hover:underline">Iniciar Sesión</Link>
+                </div>
+              )}
+            </div>
+
+            {/* Lista de Reseñas */}
+            <div className="lg:col-span-2 space-y-4">
+              {reviews.length > 0 ? (
+                reviews.map(review => (
+                  <div key={review.id} className="bg-white dark:bg-slate-800/40 p-6 rounded-2xl border border-slate-200 dark:border-slate-700">
+                    <div className="flex items-center gap-3 mb-3">
+                      {review.avatar_url ? (
+                        <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 border border-slate-200 dark:border-slate-700">
+                          <img src={review.avatar_url} alt={review.nombre_usuario} className="w-full h-full object-cover" />
+                        </div>
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center font-bold text-primary shrink-0">
+                          {review.nombre_usuario.charAt(0)}
+                        </div>
+                      )}
+                      <div>
+                        <p className="font-bold text-slate-900 dark:text-white text-sm">{review.nombre_usuario}</p>
+                        <div className="flex items-center gap-1 mt-1">
+                          {[...Array(5)].map((_, i) => (
+                            <Star key={i} className={`w-3 h-3 ${i < review.rating ? 'text-yellow-400 fill-yellow-400' : 'text-slate-300 dark:text-slate-700'}`} />
+                          ))}
+                          <span className="text-xs text-slate-400 ml-2">{new Date(review.created_at).toLocaleDateString()}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed">{review.comentario}</p>
+                  </div>
+                ))
+              ) : (
+                <div className="h-full flex flex-col items-center justify-center p-12 bg-white dark:bg-slate-800/20 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700">
+                  <Star className="w-12 h-12 text-slate-300 dark:text-slate-600 mb-4" />
+                  <p className="text-slate-500 dark:text-slate-400 text-center">No hay reseñas para este producto aún. ¡Anímate a ser el primero!</p>
+                </div>
+              )}
             </div>
           </div>
         </div>

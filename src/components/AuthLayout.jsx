@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import img1 from '../assets/dashboard.jpeg'
 import img2 from '../assets/Datos.jpeg'
 import img3 from '../assets/IA.jpeg'
+import logoImg from '../assets/neurotekIA.png'
 
 const slides = [
   {
@@ -54,10 +55,8 @@ export default function AuthLayout({ children }) {
       <div className="flex flex-col justify-between w-full md:w-1/2 px-10 py-10 bg-white">
         {/* Logo */}
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-primary rounded-md flex items-center justify-center">
-            <svg className="w-5 h-5 text-slate-900 dark:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10" />
-            </svg>
+          <div className="w-8 h-8 rounded-md overflow-hidden shrink-0 flex items-center justify-center">
+            <img src={logoImg} alt="NeuroTek Logo" className="w-full h-full object-cover" />
           </div>
           <span className="text-lg font-bold text-gray-800">NeuroTek</span>
         </div>

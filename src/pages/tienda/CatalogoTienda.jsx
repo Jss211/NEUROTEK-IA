@@ -2,10 +2,12 @@ import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import TiendaLayout from '../../components/tienda/TiendaLayout';
 import { useTienda } from '../../context/TiendaContext';
+import { useConfig } from '../../context/ConfigContext';
 import { supabase } from '../../lib/supabase';
 
 export default function CatalogoTienda() {
   const { agregarAlCarrito } = useTienda();
+  const { formatPrice, getLocalized } = useConfig();
   const [productos, setProductos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busqueda, setBusqueda] = useState('');
@@ -75,15 +77,16 @@ export default function CatalogoTienda() {
 
   // Filtered products (search + category)
   const productosFiltrados = useMemo(() => {
+    const termino = busqueda.toLowerCase();
     return productos.filter((p) => {
-      const matchBusqueda = p.nombre
-        .toLowerCase()
-        .includes(busqueda.toLowerCase());
+      const matchBusqueda =
+        getLocalized(p, 'nombre').toLowerCase().includes(termino) ||
+        (p.marca && p.marca.toLowerCase().includes(termino));
       const matchCategoria =
         categoriaActiva === 'Todos' || p.categoria === categoriaActiva;
       return matchBusqueda && matchCategoria;
     });
-  }, [productos, busqueda, categoriaActiva]);
+  }, [productos, busqueda, categoriaActiva, getLocalized]);
 
   const handleAgregarCarrito = (producto) => {
     agregarAlCarrito({
@@ -212,19 +215,29 @@ export default function CatalogoTienda() {
                 key={producto.id}
                 className="bg-white dark:bg-slate-800/60 rounded-2xl overflow-hidden shadow-sm border border-slate-200 dark:border-slate-700/50 hover:shadow-xl dark:hover:shadow-2xl dark:hover:shadow-primary/5 transition-all duration-300 group relative flex flex-col"
               >
-                {/* Badge: últimas unidades */}
-                {producto.stock <= 5 && producto.stock > 0 && (
-                  <div className="absolute top-3 left-3 bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full z-10 shadow-md">
-                    ¡Últimas unidades!
-                  </div>
-                )}
+                {/* Top Left Badges Group */}
+                <div className="absolute top-3 left-3 flex flex-col gap-2 z-10">
+                  {/* Badge: sin stock */}
+                  {producto.stock === 0 ? (
+                    <div className="bg-slate-700 text-white text-xs font-bold px-3 py-1 rounded-full shadow-md">
+                      Agotado
+                    </div>
+                  ) : (
+                    /* Badge: últimas unidades */
+                    producto.stock <= 5 && producto.stock > 0 && (
+                      <div className="bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-md">
+                        ¡Últimas unidades!
+                      </div>
+                    )
+                  )}
 
-                {/* Badge: sin stock */}
-                {producto.stock === 0 && (
-                  <div className="absolute top-3 left-3 bg-slate-700 text-white text-xs font-bold px-3 py-1 rounded-full z-10 shadow-md">
-                    Agotado
-                  </div>
-                )}
+                  {/* Offer Badge */}
+                  {producto.en_oferta && (
+                    <div className="bg-primary text-white text-xs font-black px-3 py-1.5 rounded-lg shadow-lg uppercase tracking-widest border border-primary-light">
+                      Oferta
+                    </div>
+                  )}
+                </div>
 
                 {/* Category Badge */}
                 {producto.categoria && (
@@ -238,7 +251,7 @@ export default function CatalogoTienda() {
                   {producto.imagen_url ? (
                     <img
                       src={producto.imagen_url}
-                      alt={producto.nombre}
+                      alt={getLocalized(producto, 'nombre')}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                       loading="lazy"
                     />
@@ -268,15 +281,28 @@ export default function CatalogoTienda() {
                     className="block"
                   >
                     <h3 className="font-semibold text-slate-900 dark:text-white text-sm mb-3 line-clamp-2 h-10 hover:text-primary transition-colors">
-                      {producto.nombre}
+                      {getLocalized(producto, 'nombre')}
                     </h3>
                   </Link>
 
                   {/* Precio y Disponibilidad */}
                   <div className="flex justify-between items-end mb-4 mt-auto">
-                    <span className="text-lg font-bold text-primary">
-                      ${producto.precio.toFixed(2)}
-                    </span>
+                    <div className="flex flex-col">
+                      {producto.en_oferta ? (
+                        <>
+                          <span className="text-xl font-bold text-primary leading-none">
+                            {formatPrice(producto.precio_oferta)}
+                          </span>
+                          <span className="text-xs text-slate-400 line-through mt-1">
+                            {formatPrice(producto.precio)}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-lg font-bold text-primary">
+                          {formatPrice(producto.precio)}
+                        </span>
+                      )}
+                    </div>
                     <span
                       className={`text-xs font-medium ${
                         producto.stock === 0
@@ -294,7 +320,10 @@ export default function CatalogoTienda() {
 
                   {/* Botón Añadir al Carrito */}
                   <button
-                    onClick={() => handleAgregarCarrito(producto)}
+                    onClick={() => handleAgregarCarrito({
+                      ...producto,
+                      precio: producto.en_oferta ? producto.precio_oferta : producto.precio
+                    })}
                     disabled={producto.stock === 0}
                     className={`w-full font-semibold py-2.5 rounded-xl flex items-center justify-center gap-2 transition-all duration-200 text-sm ${
                       producto.stock === 0

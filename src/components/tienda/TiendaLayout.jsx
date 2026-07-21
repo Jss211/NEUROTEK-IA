@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useTienda } from '../../context/TiendaContext';
 import CarritoDrawer from './CarritoDrawer';
 import { supabase } from '../../lib/supabase';
+import logoImg from '../../assets/neurotekIA.png';
 
 export default function TiendaLayout({ children }) {
   const { user } = useAuth();
@@ -14,9 +15,9 @@ export default function TiendaLayout({ children }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const profileRef = useRef(null);
 
+  // Light/Dark mode state
   const [isDarkMode, setIsDarkMode] = useState(() => {
-    return localStorage.getItem('theme') === 'dark' || 
-      (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    return localStorage.getItem('theme') !== 'light';
   });
 
   useEffect(() => {
@@ -63,32 +64,58 @@ export default function TiendaLayout({ children }) {
           localStorage.removeItem(key)
         }
       }
-      window.location.href = '/login'
+      window.location.href = '/tienda'
     }
   };
 
   const navLinks = [
-    { to: '/tienda', label: 'Inicio', exact: true },
-    { to: '/tienda/catalogo', label: 'Catálogo' },
+    { 
+      to: '/tienda', 
+      label: 'Inicio', 
+      exact: true,
+      icon: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
+    },
+    { 
+      to: '/tienda/catalogo', 
+      label: 'Catálogo',
+      icon: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
+    },
+    {
+      to: '/tienda/ofertas',
+      label: 'Ofertas',
+      icon: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+    },
+    {
+      to: '/tienda/nosotros',
+      label: 'Nosotros',
+      icon: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m3-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+    },
+    {
+      to: '/tienda/soporte',
+      label: 'Soporte',
+      icon: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+    },
     ...(user ? [
-      { to: '/tienda/historial', label: 'Mis Compras' },
+      { 
+        to: '/tienda/historial', 
+        label: 'Mis Compras',
+        icon: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>
+      },
     ] : []),
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#0f1117] text-slate-900 dark:text-white font-sans">
+    <div className="min-h-screen bg-slate-50 dark:bg-black text-slate-900 dark:text-white font-sans selection:bg-primary/30 selection:text-white">
       
       {/* ===== TOP NAVBAR ===== */}
-      <header className="sticky top-0 z-50 bg-white/80 dark:bg-[#13151f]/80 backdrop-blur-xl border-b border-black/5 dark:border-white/5">
+      <header className="sticky top-0 z-50 bg-white/80 dark:bg-black/80 backdrop-blur-xl border-b border-black/10 dark:border-white/10 shadow-[0_0_15px_rgba(0,243,255,0.1)]">
         <div className="w-full px-4 sm:px-6">
           <div className="flex items-center justify-between h-16 relative">
             
             {/* Left: Logo */}
             <NavLink to="/tienda" className="flex items-center gap-2.5 shrink-0">
-              <div className="w-9 h-9 bg-primary rounded-xl flex items-center justify-center">
-                <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
+              <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0 flex items-center justify-center">
+                <img src={logoImg} alt="NeuroTek Logo" className="w-full h-full object-cover" />
               </div>
               <span className="font-bold text-slate-900 dark:text-white text-lg hidden sm:block">
                 NeuroTek <span className="text-primary text-sm font-medium">Store</span>
@@ -96,7 +123,7 @@ export default function TiendaLayout({ children }) {
             </NavLink>
 
             {/* Center: Nav Links */}
-            <nav className="hidden md:flex items-center gap-1 absolute left-1/2 -translate-x-1/2">
+            <nav className="hidden lg:flex items-center gap-1 absolute left-1/2 -translate-x-1/2">
               {navLinks.map((link) => {
                 const isActive = link.exact
                   ? location.pathname === link.to
@@ -105,12 +132,17 @@ export default function TiendaLayout({ children }) {
                   <NavLink
                     key={link.to}
                     to={link.to}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 group ${
                       isActive
                         ? 'bg-primary/10 text-primary'
                         : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5'
                     }`}
                   >
+                    {link.icon && (
+                      <span className={`transition-transform duration-300 group-hover:scale-110 ${isActive ? 'text-primary' : 'text-slate-400 dark:text-slate-500 group-hover:text-slate-900 dark:group-hover:text-white'}`}>
+                        {link.icon}
+                      </span>
+                    )}
                     {link.label}
                   </NavLink>
                 );
@@ -149,6 +181,7 @@ export default function TiendaLayout({ children }) {
                   <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
                 </NavLink>
               )}
+
 
               {/* Cart Button */}
               <button
@@ -198,24 +231,38 @@ export default function TiendaLayout({ children }) {
                         <p className="text-sm font-semibold text-slate-900 dark:text-white">{nombre}</p>
                         <p className="text-xs text-slate-500 truncate">{user?.email}</p>
                       </div>
-                      <NavLink
-                        to="/tienda/perfil"
-                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-600 dark:text-slate-300 hover:bg-black/5 dark:hover:bg-white/5 transition"
-                      >
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                        </svg>
-                        Mi Perfil
-                      </NavLink>
-                      <NavLink
-                        to="/tienda/historial"
-                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-600 dark:text-slate-300 hover:bg-black/5 dark:hover:bg-white/5 transition"
-                      >
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                        </svg>
-                        Mis Compras
-                      </NavLink>
+                      {user?.role === 'admin' || user?.role === 'vendedor' ? (
+                        <NavLink
+                          to="/admin/dashboard"
+                          className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-600 dark:text-slate-300 hover:bg-black/5 dark:hover:bg-white/5 transition"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                          </svg>
+                          Panel de Admin
+                        </NavLink>
+                      ) : (
+                        <>
+                          <NavLink
+                            to="/tienda/perfil"
+                            className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-600 dark:text-slate-300 hover:bg-black/5 dark:hover:bg-white/5 transition"
+                          >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            </svg>
+                            Mi Perfil
+                          </NavLink>
+                          <NavLink
+                            to="/tienda/historial"
+                            className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-600 dark:text-slate-300 hover:bg-black/5 dark:hover:bg-white/5 transition"
+                          >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                            </svg>
+                            Mis Compras
+                          </NavLink>
+                        </>
+                      )}
                       <div className="border-t border-black/5 dark:border-white/5 mt-1 pt-1">
                         <button
                           onClick={handleLogout}
@@ -272,12 +319,17 @@ export default function TiendaLayout({ children }) {
                 <NavLink
                   key={link.to}
                   to={link.to}
-                  className={`block px-4 py-2.5 rounded-lg text-sm font-medium transition ${
+                  className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition ${
                     isActive
                       ? 'bg-primary/10 text-primary'
                       : 'text-slate-600 dark:text-slate-400 hover:bg-black/5 dark:hover:bg-white/5'
                   }`}
                 >
+                  {link.icon && (
+                    <span className={`${isActive ? 'text-primary' : 'text-slate-400 dark:text-slate-500'}`}>
+                      {link.icon}
+                    </span>
+                  )}
                   {link.label}
                 </NavLink>
               );

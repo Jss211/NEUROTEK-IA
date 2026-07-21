@@ -75,19 +75,28 @@ export function TiendaProvider({ children }) {
 
       if (error) throw error;
 
-      // Descontar stock de cada producto
+      // Descontar stock de cada producto de manera segura consultando la BD
       for (const item of carrito) {
-        await supabase
+        const { data: prodData } = await supabase
           .from('productos')
-          .update({ stock: Math.max(0, (item.stock || 0) - item.cantidad) })
-          .eq('id', item.id);
+          .select('stock')
+          .eq('id', item.id)
+          .single();
+          
+        if (prodData) {
+          await supabase
+            .from('productos')
+            .update({ stock: Math.max(0, prodData.stock - item.cantidad) })
+            .eq('id', item.id);
+        }
       }
 
       // Vaciar carrito
+      const copiaCarrito = [...carrito];
       setCarrito([]);
       setIsCarritoOpen(false);
       
-      return { success: true, orden: data };
+      return { success: true, orden: data, items: copiaCarrito };
     } catch (error) {
       console.error('Error al realizar compra:', error);
       return { success: false, error: error.message };

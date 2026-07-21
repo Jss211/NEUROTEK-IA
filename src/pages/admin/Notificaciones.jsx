@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import AdminLayout from '../../components/admin/AdminLayout'
 import { supabase } from '../../lib/supabase'
+import { useConfig } from '../../context/ConfigContext'
 
 function StatCard({ label, value, icon, iconBg, iconColor }) {
   return (
@@ -19,6 +20,7 @@ function StatCard({ label, value, icon, iconBg, iconColor }) {
 }
 
 export default function Notificaciones() {
+  const { t, getLocalized, formatPrice } = useConfig()
   const [notifs, setNotifs] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -39,9 +41,9 @@ export default function Notificaciones() {
             alerts.push({
               id: `stock-${p.id}`,
               tipo: 'stock',
-              titulo: p.stock === 0 ? 'Sin stock' : 'Stock bajo',
-              texto: `${p.nombre}: solo quedan ${p.stock} unidades`,
-              tiempo: 'Actual',
+              titulo: p.stock === 0 ? t('admin.notif.out_of_stock') : t('admin.notif.low_stock'),
+              texto: `${getLocalized(p, 'nombre')}: ${t('admin.notif.units_left')} ${p.stock} ${t('admin.dash.units')}`,
+              tiempo: t('admin.notif.time_now'),
               leida: readNotifs.includes(`stock-${p.id}`),
               critica: p.stock === 0,
               iconBg: p.stock === 0 ? 'bg-red-500/15' : 'bg-orange-500/15',
@@ -62,8 +64,8 @@ export default function Notificaciones() {
           alerts.push({
             id: `ord-${o.id}`,
             tipo: 'orden',
-            titulo: o.estado === 'Completada' ? 'Orden completada' : 'Nueva orden',
-            texto: `${o.cliente_nombre || o.cliente} realizó una orden de S/ ${parseFloat(o.total).toFixed(2)}`,
+            titulo: o.estado === 'Completada' ? t('admin.notif.order_completed') : t('admin.notif.new_order'),
+            texto: `${o.cliente_nombre || o.cliente} ${t('admin.notif.order_made')} ${formatPrice(parseFloat(o.total))}`,
             tiempo: new Date(o.fecha).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
             leida: o.estado === 'Completada' || readNotifs.includes(`ord-${o.id}`),
             critica: false,
@@ -71,6 +73,26 @@ export default function Notificaciones() {
             iconColor: 'text-green-400',
             icono: o.estado === 'Completada' ? 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10' : 'M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z',
             timestamp: new Date(o.fecha).getTime()
+          })
+        })
+      }
+
+      // 3. Nuevos clientes del día
+      const { data: clients } = await supabase.from('usuarios').select('*').eq('rol', 'cliente').gte('created_at', today.toISOString())
+      if (clients) {
+        clients.forEach(c => {
+          alerts.push({
+            id: `cli-${c.id}`,
+            tipo: 'cliente',
+            titulo: t('admin.notif.new_client'),
+            texto: `${c.nombre || c.email} ${t('admin.notif.client_registered')}`,
+            tiempo: new Date(c.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+            leida: readNotifs.includes(`cli-${c.id}`),
+            critica: false,
+            iconBg: 'bg-blue-500/15',
+            iconColor: 'text-blue-400',
+            icono: 'M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z',
+            timestamp: new Date(c.created_at).getTime()
           })
         })
       }
@@ -90,9 +112,9 @@ export default function Notificaciones() {
         setNotifs(prev => [{
           id: `ord-${o.id}-${Date.now()}`,
           tipo: 'orden',
-          titulo: '¡Nueva orden en tiempo real!',
-          texto: `${o.cliente_nombre || o.cliente} realizó una orden de S/ ${parseFloat(o.total).toFixed(2)}`,
-          tiempo: 'Justo ahora',
+          titulo: t('admin.notif.new_order_realtime'),
+          texto: `${o.cliente_nombre || o.cliente} ${t('admin.notif.order_made')} ${formatPrice(parseFloat(o.total))}`,
+          tiempo: t('admin.notif.just_now'),
           leida: false,
           critica: false,
           iconBg: 'bg-green-500/15',
@@ -101,23 +123,23 @@ export default function Notificaciones() {
           timestamp: Date.now()
         }, ...prev])
       })
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'usuarios' }, (payload) => {
-        const u = payload.new
-        if (u.rol === 'cliente') {
-          setNotifs(prev => [{
-            id: `usr-${u.id}-${Date.now()}`,
-            tipo: 'cliente',
-            titulo: 'Nuevo cliente registrado',
-            texto: `${u.nombre || u.email} se registró en el sistema`,
-            tiempo: 'Justo ahora',
-            leida: false,
-            critica: false,
-            iconBg: 'bg-primary/15',
-            iconColor: 'text-primary/80',
-            icono: 'M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z',
-            timestamp: Date.now()
-          }, ...prev])
-        }
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'usuarios', filter: 'rol=eq.cliente' }, (payload) => {
+        const c = payload.new
+        setNotifs(prev => [{
+          id: `cli-${c.id}-${Date.now()}`,
+          tipo: 'cliente',
+          titulo: t('admin.notif.new_client'),
+          texto: `${c.nombre || c.email} ${t('admin.notif.client_registered')}`,
+          tiempo: t('admin.notif.just_now'),
+          leida: false,
+          critica: false,
+          iconBg: 'bg-blue-500/15',
+          iconColor: 'text-blue-400',
+          icono: 'M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z',
+          timestamp: Date.now()
+        }, ...prev])
+        setSinLeer(s => s + 1)
+        setHoy(h => h + 1)
       })
       .subscribe()
 
@@ -176,7 +198,7 @@ export default function Notificaciones() {
     return (
       <AdminLayout>
         <div className="flex items-center justify-center min-h-[50vh]">
-          <div className="text-primary animate-pulse font-medium">Cargando notificaciones en vivo...</div>
+          <div className="text-primary animate-pulse font-medium">{t('admin.notif.loading')}</div>
         </div>
       </AdminLayout>
     )
@@ -188,14 +210,14 @@ export default function Notificaciones() {
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
         <div>
           <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Notificaciones</h1>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t('admin.notif.title')}</h1>
             {sinLeer > 0 && (
               <span className="px-2.5 py-0.5 bg-cyan-500/15 text-cyan-400 text-xs font-semibold rounded-full border border-cyan-500/25">
-                {sinLeer} nuevas
+                {sinLeer} {t('admin.notif.new_plural')}
               </span>
             )}
           </div>
-          <p className="text-slate-500 dark:text-gray-400 text-sm mt-1">Centro de notificaciones y alertas en tiempo real</p>
+          <p className="text-slate-500 dark:text-gray-400 text-sm mt-1">{t('admin.notif.subtitle')}</p>
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
@@ -207,7 +229,7 @@ export default function Notificaciones() {
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            Marcar todas como leídas
+            {t('admin.notif.mark_all_read')}
           </button>
           <button
             onClick={limpiar}
@@ -217,7 +239,7 @@ export default function Notificaciones() {
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
             </svg>
-            Limpiar
+            {t('admin.notif.clear')}
           </button>
         </div>
       </div>
@@ -225,28 +247,28 @@ export default function Notificaciones() {
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <StatCard
-          label="Total"
+          label={t('admin.notif.stats.total')}
           value={notifs.length}
           iconBg="bg-primary/10"
           iconColor="text-primary/80"
           icon={<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />}
         />
         <StatCard
-          label="No leídas"
+          label={t('admin.notif.stats.unread')}
           value={sinLeer}
           iconBg="bg-cyan-500/10"
           iconColor="text-cyan-400"
           icon={<circle cx="12" cy="12" r="4" fill="currentColor" stroke="none" />}
         />
         <StatCard
-          label="Críticas"
+          label={t('admin.notif.stats.critical')}
           value={criticas}
           iconBg="bg-red-500/10"
           iconColor="text-red-400"
           icon={<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />}
         />
         <StatCard
-          label="Hoy"
+          label={t('admin.notif.stats.today')}
           value={hoy}
           iconBg="bg-green-500/10"
           iconColor="text-green-400"
@@ -256,8 +278,8 @@ export default function Notificaciones() {
 
       {/* Actividad reciente */}
       <div className="mb-4">
-        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Actividad Reciente</h2>
-        <p className="text-slate-500 dark:text-gray-400 text-sm mt-0.5">Todas tus notificaciones en vivo</p>
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{t('admin.notif.activity.title')}</h2>
+        <p className="text-slate-500 dark:text-gray-400 text-sm mt-0.5">{t('admin.notif.activity.subtitle')}</p>
       </div>
 
       <div className="space-y-3">
@@ -268,8 +290,8 @@ export default function Notificaciones() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
               </svg>
             </div>
-            <p className="text-slate-900 dark:text-white font-medium">Bandeja vacía</p>
-            <p className="text-sm text-gray-500 mt-1">No tienes notificaciones en este momento</p>
+            <p className="text-slate-900 dark:text-white font-medium">{t('admin.notif.empty.title')}</p>
+            <p className="text-sm text-gray-500 mt-1">{t('admin.notif.empty.subtitle')}</p>
           </div>
         ) : (
           notifs.map((n) => (
@@ -301,7 +323,7 @@ export default function Notificaciones() {
                     </p>
                     {n.critica && (
                       <span className="px-2 py-0.5 bg-red-500/10 text-red-400 text-[10px] font-bold uppercase tracking-wider rounded-md border border-red-500/20">
-                        Urgente
+                        {t('admin.notif.urgent')}
                       </span>
                     )}
                   </div>
@@ -317,7 +339,7 @@ export default function Notificaciones() {
                   <button
                     onClick={() => marcarLeida(n.id)}
                     className="p-2 text-primary hover:text-blue-400 hover:bg-primary/10 rounded-lg transition"
-                    title="Marcar como leída"
+                    title={t('admin.notif.mark_read')}
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -327,7 +349,7 @@ export default function Notificaciones() {
                 <button
                   onClick={() => eliminar(n.id)}
                   className="p-2 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition"
-                  title="Eliminar"
+                  title={t('admin.notif.delete')}
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />

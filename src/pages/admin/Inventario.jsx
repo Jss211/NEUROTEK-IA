@@ -3,27 +3,33 @@ import AdminLayout from '../../components/admin/AdminLayout'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import * as XLSX from 'xlsx'
+import { useConfig } from '../../context/ConfigContext'
 
-function getEstado(stock, stockMinimo) {
-  if (stock === 0) return 'Sin Stock'
-  if (stock <= stockMinimo * 0.5) return 'Crítico'
-  if (stock <= stockMinimo) return 'Bajo'
-  return 'Normal'
+function getEstado(stock, stockMinimo, t) {
+  if (stock === 0) return t('admin.inv.status.out_of_stock')
+  if (stock <= stockMinimo * 0.5) return t('admin.inv.status.critical')
+  if (stock <= stockMinimo) return t('admin.inv.status.low')
+  return t('admin.inv.status.normal')
 }
 
 const estadoStyle = {
-  Normal:    'bg-green-500/20 text-green-400 border border-green-500/20',
-  Bajo:      'bg-yellow-500/20 text-yellow-400 border border-yellow-500/20',
-  Crítico:   'bg-red-500/20 text-red-400 border border-red-500/20',
   'Sin Stock': 'bg-gray-500/20 text-slate-500 dark:text-gray-400 border border-gray-500/20',
+  'Out of Stock': 'bg-gray-500/20 text-slate-500 dark:text-gray-400 border border-gray-500/20',
+  'Normal':    'bg-green-500/20 text-green-400 border border-green-500/20',
+  'Bajo':      'bg-yellow-500/20 text-yellow-400 border border-yellow-500/20',
+  'Low':      'bg-yellow-500/20 text-yellow-400 border border-yellow-500/20',
+  'Crítico':   'bg-red-500/20 text-red-400 border border-red-500/20',
+  'Critical':   'bg-red-500/20 text-red-400 border border-red-500/20',
 }
 
 export default function Inventario() {
   const { user } = useAuth()
+  const { t } = useConfig()
   const [productos, setProductos] = useState([])
   const [loading, setLoading] = useState(true)
   const [filtro, setFiltro] = useState('')
   const [filtroEstado, setFiltroEstado] = useState('')
+  const [dropdownOpen, setDropdownOpen] = useState(false)
   const [editandoStock, setEditandoStock] = useState(null)
   const [nuevoStock, setNuevoStock] = useState('')
 
@@ -57,12 +63,10 @@ export default function Inventario() {
   const handleExportar = () => {
     const datos = productos.map(p => ({
       'Nombre':        p.nombre || '',
-      'SKU':           p.sku || '',
       'Categoría':     p.categoria || '',
       'Stock':         p.stock ?? 0,
       'Stock Mínimo':  p.stock_minimo ?? 5,
-      'Ubicación':     p.ubicacion || '',
-      'Estado':        getEstado(p.stock || 0, p.stock_minimo || 5),
+      'Estado':        getEstado(p.stock || 0, p.stock_minimo || 5, t),
       'Activo':        p.activo ? 'Sí' : 'No',
     }))
 
@@ -72,9 +76,9 @@ export default function Inventario() {
 
     // Ancho de columnas automático
     ws['!cols'] = [
-      { wch: 35 }, { wch: 12 }, { wch: 18 },
-      { wch: 8 }, { wch: 14 }, { wch: 12 },
-      { wch: 10 }, { wch: 8 },
+      { wch: 35 }, { wch: 18 },
+      { wch: 8 }, { wch: 14 },
+      { wch: 14 }, { wch: 8 },
     ]
 
     const fecha = new Date().toISOString().slice(0, 10)
@@ -98,7 +102,7 @@ export default function Inventario() {
   const productosFiltrados = productos.filter(p => {
     const matchTexto = p.nombre?.toLowerCase().includes(filtro.toLowerCase()) ||
       p.sku?.toLowerCase().includes(filtro.toLowerCase())
-    const estado = getEstado(p.stock || 0, p.stock_minimo || 5)
+    const estado = getEstado(p.stock || 0, p.stock_minimo || 5, t)
     const matchEstado = filtroEstado ? estado === filtroEstado : true
     return matchTexto && matchEstado
   })
@@ -106,12 +110,12 @@ export default function Inventario() {
   // Stats
   const totalItems = productos.length
   const stockBajo = productos.filter(p => {
-    const e = getEstado(p.stock || 0, p.stock_minimo || 5)
-    return e === 'Bajo'
+    const e = getEstado(p.stock || 0, p.stock_minimo || 5, t)
+    return e === t('admin.inv.status.low')
   }).length
   const stockCritico = productos.filter(p => {
-    const e = getEstado(p.stock || 0, p.stock_minimo || 5)
-    return e === 'Crítico' || e === 'Sin Stock'
+    const e = getEstado(p.stock || 0, p.stock_minimo || 5, t)
+    return e === t('admin.inv.status.critical') || e === t('admin.inv.status.out_of_stock')
   }).length
 
   return (
@@ -119,8 +123,8 @@ export default function Inventario() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Inventario</h1>
-          <p className="text-slate-500 dark:text-gray-400 text-sm mt-1">Gestión y control de stock</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t('admin.inv.title')}</h1>
+          <p className="text-slate-500 dark:text-gray-400 text-sm mt-1">{t('admin.inv.subtitle')}</p>
         </div>
         <div className="flex gap-3">
           <button 
@@ -130,7 +134,7 @@ export default function Inventario() {
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
             </svg>
-            Exportar
+            {t('admin.inv.btn_export')}
           </button>
         </div>
       </div>
@@ -139,7 +143,7 @@ export default function Inventario() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <div className="bg-white dark:bg-[#1a1d2e] border border-black/5 dark:border-white/5 rounded-xl p-5 flex items-center justify-between">
           <div>
-            <p className="text-xs text-slate-500 dark:text-gray-400 uppercase tracking-wider mb-1">Items Totales</p>
+            <p className="text-xs text-slate-500 dark:text-gray-400 uppercase tracking-wider mb-1">{t('admin.inv.stats.total')}</p>
             <p className="text-3xl font-bold text-slate-900 dark:text-white">{totalItems}</p>
           </div>
           <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center">
@@ -151,7 +155,7 @@ export default function Inventario() {
 
         <div className="bg-white dark:bg-[#1a1d2e] border border-black/5 dark:border-white/5 rounded-xl p-5 flex items-center justify-between">
           <div>
-            <p className="text-xs text-slate-500 dark:text-gray-400 uppercase tracking-wider mb-1">Stock Bajo</p>
+            <p className="text-xs text-slate-500 dark:text-gray-400 uppercase tracking-wider mb-1">{t('admin.inv.stats.low')}</p>
             <p className="text-3xl font-bold text-yellow-400">{stockBajo}</p>
           </div>
           <div className="w-12 h-12 bg-yellow-500/10 rounded-xl flex items-center justify-center">
@@ -163,7 +167,7 @@ export default function Inventario() {
 
         <div className="bg-white dark:bg-[#1a1d2e] border border-black/5 dark:border-white/5 rounded-xl p-5 flex items-center justify-between">
           <div>
-            <p className="text-xs text-slate-500 dark:text-gray-400 uppercase tracking-wider mb-1">Stock Crítico</p>
+            <p className="text-xs text-slate-500 dark:text-gray-400 uppercase tracking-wider mb-1">{t('admin.inv.stats.critical')}</p>
             <p className="text-3xl font-bold text-red-400">{stockCritico}</p>
           </div>
           <div className="w-12 h-12 bg-red-500/10 rounded-xl flex items-center justify-center">
@@ -178,8 +182,8 @@ export default function Inventario() {
       <div className="bg-white dark:bg-[#1a1d2e] border border-black/5 dark:border-white/5 rounded-xl">
         {/* Tabla header */}
         <div className="p-5 border-b border-black/5 dark:border-white/5">
-          <h2 className="text-sm font-semibold text-slate-900 dark:text-white mb-0.5">Stock de Productos</h2>
-          <p className="text-xs text-gray-500">Monitoreo en tiempo real del inventario</p>
+          <h2 className="text-sm font-semibold text-slate-900 dark:text-white mb-0.5">{t('admin.inv.table.title')}</h2>
+          <p className="text-xs text-gray-500">{t('admin.inv.table.subtitle')}</p>
         </div>
 
         {/* Búsqueda y filtros */}
@@ -190,29 +194,44 @@ export default function Inventario() {
             </svg>
             <input
               type="text"
-              placeholder="Buscar por nombre o SKU..."
+              placeholder={t('admin.inv.search')}
               value={filtro}
               onChange={e => setFiltro(e.target.value)}
               className="bg-transparent text-sm text-slate-600 dark:text-gray-300 placeholder-gray-500 outline-none w-full"
             />
           </div>
-          <select
-            value={filtroEstado}
-            onChange={e => setFiltroEstado(e.target.value)}
-            className="bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-600 dark:text-gray-300 outline-none"
-          >
-            <option value="">Todos</option>
-            <option value="Normal">Normal</option>
-            <option value="Bajo">Bajo</option>
-            <option value="Crítico">Crítico</option>
-            <option value="Sin Stock">Sin Stock</option>
-          </select>
-          <button className="flex items-center gap-2 bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 hover:bg-white/10 text-slate-600 dark:text-gray-300 px-4 py-2.5 rounded-xl text-sm transition">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z" />
-            </svg>
-            Filtros
-          </button>
+          {/* Custom dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setDropdownOpen(o => !o)}
+              className="flex items-center gap-2 bg-white dark:bg-[#1a1d2e] border border-black/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-600 dark:text-gray-300 min-w-[130px] justify-between"
+            >
+              <span>{filtroEstado || t('admin.inv.filter.all')}</span>
+              <svg className={`w-4 h-4 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {dropdownOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setDropdownOpen(false)} />
+                <div className="absolute right-0 mt-1 z-20 bg-white dark:bg-[#1a1d2e] border border-black/10 dark:border-white/10 rounded-xl overflow-hidden shadow-xl min-w-[130px]">
+                  {[t('admin.inv.filter.all'), t('admin.inv.status.normal'), t('admin.inv.status.low'), t('admin.inv.status.critical'), t('admin.inv.status.out_of_stock')].map((op, i) => (
+                    <button
+                      key={i}
+                      onClick={() => { setFiltroEstado(i === 0 ? '' : op); setDropdownOpen(false) }}
+                      className={`w-full text-left px-4 py-2.5 text-sm transition hover:bg-primary/10 hover:text-primary ${
+                        (i === 0 && filtroEstado === '') || (i > 0 && filtroEstado === op)
+                          ? 'text-primary font-semibold'
+                          : 'text-slate-600 dark:text-gray-300'
+                      }`}
+                    >
+                      {op}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Tabla */}
@@ -225,25 +244,23 @@ export default function Inventario() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-black/5 dark:border-white/5">
-                  <th className="text-left px-5 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium">Producto</th>
-                  <th className="text-left px-5 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium">SKU</th>
-                  <th className="text-left px-5 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium">Stock</th>
-                  <th className="text-left px-5 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium">Min. Stock</th>
-                  <th className="text-left px-5 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium">Ubicación</th>
-                  <th className="text-left px-5 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium">Estado</th>
-                  <th className="text-left px-5 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium">Acción</th>
+                  <th className="text-left px-5 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium w-[40%]">{t('admin.inv.table.col_product')}</th>
+                  <th className="text-center px-5 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium w-[15%]">{t('admin.inv.table.col_stock')}</th>
+                  <th className="text-center px-5 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium w-[15%]">{t('admin.inv.table.col_min_stock')}</th>
+                  <th className="text-center px-5 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium w-[15%]">{t('admin.inv.table.col_status')}</th>
+                  <th className="text-center px-5 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium w-[15%]">{t('admin.inv.table.col_action')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
                 {productosFiltrados.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="text-center py-12 text-gray-500">
-                      No se encontraron productos
+                    <td colSpan={5} className="text-center py-12 text-gray-500">
+                      {t('admin.inv.table.empty')}
                     </td>
                   </tr>
                 ) : (
                   productosFiltrados.map(p => {
-                    const estado = getEstado(p.stock || 0, p.stock_minimo || 5)
+                    const estado = getEstado(p.stock || 0, p.stock_minimo || 5, t)
                     return (
                       <tr key={p.id} className="hover:bg-white/2 transition">
                         {/* Producto */}
@@ -265,21 +282,16 @@ export default function Inventario() {
                           </div>
                         </td>
 
-                        {/* SKU */}
-                        <td className="px-5 py-4 text-slate-500 dark:text-gray-400 font-mono text-xs">
-                          {p.sku || '—'}
-                        </td>
-
                         {/* Stock — editable */}
-                        <td className="px-5 py-4">
+                        <td className="px-5 py-4 text-center">
                           {editandoStock === p.id ? (
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center justify-center gap-2">
                               <input
                                 type="number"
                                 min="0"
                                 value={nuevoStock}
                                 onChange={e => setNuevoStock(e.target.value)}
-                                className="w-16 bg-black/5 dark:bg-white/5 border border-primary rounded-lg px-2 py-1 text-sm text-slate-900 dark:text-white outline-none"
+                                className="w-16 bg-black/5 dark:bg-white/5 border border-primary rounded-lg px-2 py-1 text-sm text-slate-900 dark:text-white outline-none text-center"
                                 autoFocus
                               />
                               <button
@@ -301,8 +313,8 @@ export default function Inventario() {
                             </div>
                           ) : (
                             <span className={`font-bold text-sm ${
-                              estado === 'Crítico' || estado === 'Sin Stock' ? 'text-red-400' :
-                              estado === 'Bajo' ? 'text-yellow-400' : 'text-slate-900 dark:text-white'
+                              estado === t('admin.inv.status.critical') || estado === t('admin.inv.status.out_of_stock') ? 'text-red-400' :
+                              estado === t('admin.inv.status.low') ? 'text-yellow-400' : 'text-slate-900 dark:text-white'
                             }`}>
                               {p.stock ?? 0}
                             </span>
@@ -310,28 +322,25 @@ export default function Inventario() {
                         </td>
 
                         {/* Min stock */}
-                        <td className="px-5 py-4 text-slate-500 dark:text-gray-400 text-sm">{p.stock_minimo ?? 5}</td>
-
-                        {/* Ubicación */}
-                        <td className="px-5 py-4 text-slate-500 dark:text-gray-400 text-sm">{p.ubicacion || '—'}</td>
+                        <td className="px-5 py-4 text-slate-500 dark:text-gray-400 text-sm text-center">{p.stock_minimo ?? 5}</td>
 
                         {/* Estado */}
-                        <td className="px-5 py-4">
+                        <td className="px-5 py-4 text-center">
                           <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${estadoStyle[estado]}`}>
                             {estado}
                           </span>
                         </td>
 
                         {/* Acción */}
-                        <td className="px-5 py-4">
+                        <td className="px-5 py-4 text-center">
                           <button
                             onClick={() => {
                               setEditandoStock(p.id)
                               setNuevoStock(String(p.stock ?? 0))
                             }}
-                            className="text-xs text-primary/80 hover:text-blue-300 bg-primary/10 hover:bg-primary/20 px-3 py-1.5 rounded-lg transition font-medium"
+                            className="text-xs text-primary/80 hover:text-blue-300 bg-primary/10 hover:bg-primary/20 px-3 py-1.5 rounded-lg transition font-medium inline-block"
                           >
-                            Ajustar stock
+                            {t('admin.inv.btn_adjust')}
                           </button>
                         </td>
                       </tr>
@@ -346,12 +355,8 @@ export default function Inventario() {
         {/* Footer tabla */}
         <div className="px-5 py-3 border-t border-black/5 dark:border-white/5 flex items-center justify-between">
           <p className="text-xs text-gray-500">
-            Mostrando {productosFiltrados.length} de {productos.length} productos
+            {t('admin.inv.footer.showing')} {productosFiltrados.length} {t('admin.inv.footer.of')} {productos.length} {t('admin.inv.footer.products')}
           </p>
-          <div className="flex items-center gap-1">
-            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-            <span className="text-xs text-gray-500">Tiempo real activo</span>
-          </div>
         </div>
       </div>
     </AdminLayout>

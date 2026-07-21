@@ -4,133 +4,205 @@ import { useAuth } from '../../context/AuthContext';
 import TiendaLayout from '../../components/tienda/TiendaLayout';
 import { supabase } from '../../lib/supabase';
 import { useTienda } from '../../context/TiendaContext';
+import { useConfig } from '../../context/ConfigContext';
+import { TypewriterText } from '../../components/ui/TypewriterText';
+import { ClientsSection } from '../../components/ui/testimonial-card';
 
 export default function InicioTienda() {
   const { user } = useAuth();
   const userName = user?.user_metadata?.full_name?.split(' ')[0] || 'Usuario';
   const { agregarAlCarrito } = useTienda();
+  const { t, formatPrice, getLocalized } = useConfig();
 
   const [productosDestacados, setProductosDestacados] = useState([]);
   const [loadingDestacados, setLoadingDestacados] = useState(true);
+  const [testimonios, setTestimonios] = useState([]);
 
   useEffect(() => {
-    async function fetchDestacados() {
+    async function fetchData() {
       setLoadingDestacados(true);
-      const { data, error } = await supabase
+      
+      // Fetch productos
+      const { data: prodData } = await supabase
         .from('productos')
         .select('*')
         .eq('activo', true)
         .order('created_at', { ascending: false })
         .limit(4);
 
-      if (!error && data) {
-        setProductosDestacados(data);
+      if (prodData) setProductosDestacados(prodData);
+      
+      // Fetch reviews
+      const { data: revData } = await supabase
+        .from('reviews')
+        .select(`
+          rating,
+          comentario,
+          nombre_usuario,
+          avatar_url,
+          productos(nombre)
+        `)
+        .order('created_at', { ascending: false })
+        .limit(4);
+        
+      if (revData) {
+        setTestimonios(revData.map(r => ({
+          name: r.nombre_usuario,
+          title: r.productos ? `Compró: ${r.productos.nombre}` : 'Cliente verificado',
+          quote: r.comentario,
+          avatarSrc: r.avatar_url || '',
+          rating: r.rating
+        })));
       }
+
       setLoadingDestacados(false);
     }
 
-    fetchDestacados();
+    fetchData();
   }, []);
+
+  const statsData = [
+    { value: "100%", label: "Pagos Seguros" },
+    { value: "+1K", label: "Clientes Felices" },
+    { value: "4.9", label: "Estrellas Promedio" },
+  ];
+
 
   return (
     <TiendaLayout>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-16">
         
         {/* PREMIUM HERO SECTION */}
-        <div className="relative rounded-3xl overflow-hidden shadow-sm dark:shadow-2xl bg-white dark:bg-[#0f1117] border border-slate-200 dark:border-transparent min-h-[450px] flex items-center">
+        <div className="relative rounded-3xl overflow-hidden shadow-[0_0_50px_rgba(0,243,255,0.15)] bg-slate-100 dark:bg-[#050505] border border-primary/20 min-h-[450px] flex items-center">
           {/* Fondo Abstracto (Glassmorphism & Gradients) */}
-          <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-50 dark:opacity-100">
-            <div className="absolute -top-[20%] -right-[10%] w-[60%] h-[80%] bg-primary/20 blur-[120px] rounded-full dark:mix-blend-screen mix-blend-multiply"></div>
-            <div className="absolute -bottom-[20%] -left-[10%] w-[50%] h-[60%] bg-purple-600/20 blur-[100px] rounded-full dark:mix-blend-screen mix-blend-multiply"></div>
-            <div className="absolute inset-0 bg-gradient-to-r from-white via-white/80 dark:from-[#0f1117] dark:via-[#0f1117]/80 to-transparent"></div>
+          <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-100">
+            <div className="absolute -top-[20%] -right-[10%] w-[60%] h-[80%] bg-primary/20 blur-[120px] rounded-full mix-blend-screen"></div>
+            <div className="absolute -bottom-[20%] -left-[10%] w-[50%] h-[60%] bg-blue-600/20 blur-[100px] rounded-full mix-blend-screen"></div>
+            <div className="absolute inset-0 bg-gradient-to-r from-slate-100 via-slate-100/80 dark:from-[#050505] dark:via-[#050505]/80 to-transparent"></div>
           </div>
 
           <div className="relative z-10 px-8 md:px-16 py-12 max-w-3xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-primary font-medium text-sm mb-6 backdrop-blur-md">
-              <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
-              Nueva Colección 2026
-            </div>
-            
-            <h1 className="text-4xl md:text-6xl font-extrabold text-slate-900 dark:text-white mb-6 leading-tight tracking-tight">
+            <h1 className="text-4xl md:text-6xl font-extrabold text-slate-900 dark:text-white mb-6 leading-tight tracking-tight h-[120px] md:h-auto">
               Bienvenido{user ? `, ${userName}` : ' a NeuroTek'}. <br/>
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-purple-500 dark:to-purple-400">
-                Eleva tu Setup
-              </span>
+              <TypewriterText
+                text={[
+                  "Eleva tu Setup",
+                  "Domina el Juego",
+                  "Construye tu Sueño",
+                  "Rendimiento Extremo",
+                  "Tecnología de Punta"
+                ]}
+                speed={80}
+                deleteSpeed={40}
+                delay={2000}
+                loop={true}
+                className="text-primary drop-shadow-[0_0_5px_rgba(0,243,255,0.4)] inline-block mt-2"
+              />
             </h1>
             
-            <p className="text-slate-600 dark:text-slate-300 text-lg md:text-xl mb-10 max-w-xl leading-relaxed">
-              Descubre la tecnología más avanzada para potenciar tu productividad y llevar tu experiencia gamer al siguiente nivel.
-            </p>
-            
-            <div className="flex flex-wrap items-center gap-4">
-              <Link to="/tienda/catalogo" className="px-8 py-4 bg-primary hover:bg-primary/90 text-white dark:text-slate-900 font-bold rounded-xl transition-all hover:scale-105 hover:shadow-lg hover:shadow-primary/30 flex items-center gap-2">
-                Explorar Catálogo
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                </svg>
-              </Link>
-              {user && (
-                <Link to="/tienda/historial" className="px-8 py-4 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-white font-medium rounded-xl border border-slate-200 dark:border-white/10 backdrop-blur-md transition-all">
-                  Ver mis compras
+            <p className="text-lg md:text-xl text-slate-600 dark:text-slate-300 mb-10 max-w-2xl font-light">
+                {t('home.hero.subtitle')}
+              </p>
+              
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Link 
+                  to="/tienda/catalogo"
+                  className="bg-primary hover:bg-slate-900 dark:hover:bg-white text-white dark:text-black px-8 py-4 rounded-xl font-bold text-lg transition-all transform hover:scale-105 shadow-[0_0_20px_rgba(0,243,255,0.4)] hover:shadow-[0_0_30px_rgba(0,0,0,0.2)] dark:hover:shadow-[0_0_30px_rgba(255,255,255,0.6)] text-center flex items-center justify-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                  </svg>
+                  {t('home.hero.btn.catalog')}
                 </Link>
-              )}
-            </div>
+                <Link 
+                  to="/tienda/ofertas"
+                  className="bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 backdrop-blur-md text-slate-900 dark:text-white border border-black/10 dark:border-white/20 px-8 py-4 rounded-xl font-bold text-lg transition-all text-center flex items-center justify-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+                  </svg>
+                  {t('home.hero.btn.offers')}
+                </Link>
+              </div>
           </div>
         </div>
 
-        {/* VENTAJAS PREMIUM (Rediseñado según la petición del usuario) */}
+        {/* VENTAJAS PREMIUM */}
         <div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Tarjeta 1 */}
-            <div className="group bg-white dark:bg-[#13151f] p-8 rounded-2xl border border-slate-200 dark:border-white/5 hover:border-primary/50 transition-all hover:-translate-y-1 shadow-sm hover:shadow-xl hover:shadow-primary/5 relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                <svg className="w-24 h-24 text-primary" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-              </div>
-              <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-6 text-primary group-hover:scale-110 transition-transform">
-                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-              </div>
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3">Envíos Express Privados</h3>
-              <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">Olvídate de esperas. Entregas garantizadas en menos de 24 horas a la puerta de tu casa con empaque premium de seguridad.</p>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="bg-slate-50 dark:bg-[#050505] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 flex flex-col items-center text-center transform hover:-translate-y-2 transition-all hover:border-primary/50 group">
+            <div className="w-16 h-16 bg-slate-200 dark:bg-slate-900 rounded-full flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
+              <svg className="w-8 h-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+              </svg>
             </div>
-
-            {/* Tarjeta 2 */}
-            <div className="group bg-white dark:bg-[#13151f] p-8 rounded-2xl border border-slate-200 dark:border-white/5 hover:border-purple-500/50 transition-all hover:-translate-y-1 shadow-sm hover:shadow-xl hover:shadow-purple-500/5 relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                <svg className="w-24 h-24 text-purple-500" fill="currentColor" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
-              </div>
-              <div className="w-12 h-12 bg-purple-500/10 rounded-xl flex items-center justify-center mb-6 text-purple-500 group-hover:scale-110 transition-transform">
-                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
-              </div>
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3">Garantía Elite Plus</h3>
-              <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">Todos nuestros equipos cuentan con 12 meses de cobertura total contra defectos de fábrica, sin letras pequeñas ni trámites lentos.</p>
-            </div>
-
-            {/* Tarjeta 3 */}
-            <div className="group bg-white dark:bg-[#13151f] p-8 rounded-2xl border border-slate-200 dark:border-white/5 hover:border-green-500/50 transition-all hover:-translate-y-1 shadow-sm hover:shadow-xl hover:shadow-green-500/5 relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                <svg className="w-24 h-24 text-green-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-              </div>
-              <div className="w-12 h-12 bg-green-500/10 rounded-xl flex items-center justify-center mb-6 text-green-500 group-hover:scale-110 transition-transform">
-                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
-              </div>
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3">Pagos Seguros VIP</h3>
-              <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">Tus transacciones están protegidas con encriptación militar de 256 bits. Aceptamos todas las tarjetas y criptomonedas seleccionadas.</p>
-            </div>
+            <h3 className="text-slate-900 dark:text-white font-bold text-lg mb-2">{t('home.features.shipping.title')}</h3>
+            <p className="text-slate-500 dark:text-slate-400 text-sm">{t('home.features.shipping.desc')} {formatPrice(200)}</p>
           </div>
+          
+          <div className="bg-slate-50 dark:bg-[#050505] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 flex flex-col items-center text-center transform hover:-translate-y-2 transition-all hover:border-primary/50 group">
+            <div className="w-16 h-16 bg-slate-200 dark:bg-slate-900 rounded-full flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
+              <svg className="w-8 h-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+            </div>
+            <h3 className="text-slate-900 dark:text-white font-bold text-lg mb-2">{t('home.features.support.title')}</h3>
+            <p className="text-slate-500 dark:text-slate-400 text-sm">{t('home.features.support.desc')}</p>
+          </div>
+
+          <div className="bg-slate-50 dark:bg-[#050505] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 flex flex-col items-center text-center transform hover:-translate-y-2 transition-all hover:border-primary/50 group">
+            <div className="w-16 h-16 bg-slate-200 dark:bg-slate-900 rounded-full flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
+              <svg className="w-8 h-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+            </div>
+            <h3 className="text-slate-900 dark:text-white font-bold text-lg mb-2">{t('home.features.warranty.title')}</h3>
+            <p className="text-slate-500 dark:text-slate-400 text-sm">{t('home.features.warranty.desc')}</p>
+          </div>
+
+          <div className="bg-slate-50 dark:bg-[#050505] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 flex flex-col items-center text-center transform hover:-translate-y-2 transition-all hover:border-primary/50 group">
+            <div className="w-16 h-16 bg-slate-200 dark:bg-slate-900 rounded-full flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
+              <svg className="w-8 h-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+              </svg>
+            </div>
+            <h3 className="text-slate-900 dark:text-white font-bold text-lg mb-2">{t('home.features.secure.title')}</h3>
+            <p className="text-slate-500 dark:text-slate-400 text-sm">{t('home.features.secure.desc')}</p>
+          </div>
+        </div>
+        </div>
+
+        {/* TESTIMONIOS (CLIENTS SECTION) */}
+        <div className="py-8">
+          <ClientsSection
+            tagLabel="Clientes Reales"
+            title="Lo que dicen de nosotros"
+            description="Las reseñas de nuestros compradores en tiempo real. Únete a la familia NeuroTek y eleva tu setup."
+            stats={statsData}
+            testimonials={testimonios}
+            primaryActionLabel="Ver Catálogo"
+            secondaryActionLabel="Explorar Ofertas"
+            onPrimaryClick={(e) => {
+              e.preventDefault();
+              window.location.href = '/tienda/catalogo';
+            }}
+            onSecondaryClick={(e) => {
+              e.preventDefault();
+              window.location.href = '/tienda/ofertas';
+            }}
+            className="rounded-3xl border border-slate-200 dark:border-white/5"
+          />
         </div>
 
         {/* ESCAPARATE DE PRODUCTOS */}
-        <div>
-          <div className="flex items-center justify-between mb-8">
+        <div className="pt-8">
+          <div className="flex flex-col md:flex-row justify-between items-end mb-8 border-b border-slate-200 dark:border-slate-800 pb-4">
             <div>
-              <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Lo Más Top del Mes</h2>
-              <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Selección especial de equipos de alto rendimiento.</p>
+              <h2 className="text-3xl font-black text-slate-900 dark:text-white">{t('home.trending.title')}</h2>
+              <p className="text-slate-500 dark:text-slate-400 mt-2">{t('home.trending.subtitle')}</p>
             </div>
-            <Link to="/tienda/catalogo" className="text-primary hover:text-primary/80 font-medium text-sm flex items-center gap-1">
-              Ver todo el catálogo
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
+            <Link to="/tienda/catalogo" className="text-primary hover:text-slate-900 dark:hover:text-white transition-colors text-sm font-bold flex items-center gap-1 mt-4 md:mt-0">
+              {t('home.hero.btn.catalog')} <span aria-hidden="true">&rarr;</span>
             </Link>
           </div>
 
@@ -156,7 +228,7 @@ export default function InicioTienda() {
                     {prod.imagen_url ? (
                       <img 
                         src={prod.imagen_url} 
-                        alt={prod.nombre}
+                        alt={getLocalized(prod, 'nombre')}
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                       />
                     ) : (
@@ -169,22 +241,31 @@ export default function InicioTienda() {
                     
                     {/* Hover Overlay Buttons */}
                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3 backdrop-blur-[2px]">
-                      <button 
-                        onClick={(e) => { e.preventDefault(); agregarAlCarrito(prod); }}
-                        className="w-10 h-10 rounded-full bg-primary text-slate-900 flex items-center justify-center hover:scale-110 transition-transform"
-                        title="Añadir al carrito"
-                      >
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
-                      </button>
+                      
                     </div>
                   </div>
                   
                   {/* Info */}
-                  <div className="p-5 flex flex-col flex-1">
-                    <p className="text-xs text-primary font-medium mb-1 tracking-wider uppercase">{prod.categoria}</p>
-                    <h3 className="font-bold text-slate-900 dark:text-white mb-2 line-clamp-2 leading-tight group-hover:text-primary transition-colors">{prod.nombre}</h3>
-                    <div className="mt-auto pt-4 flex items-center justify-between border-t border-slate-100 dark:border-white/5">
-                      <span className="text-lg font-black text-slate-900 dark:text-white">${parseFloat(prod.precio).toLocaleString()}</span>
+                  <div className="p-5 flex flex-col flex-grow">
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1 line-clamp-1">{getLocalized(prod, 'nombre')}</h3>
+                    <p className="text-slate-500 dark:text-slate-400 text-sm mb-4 line-clamp-2">{getLocalized(prod, 'descripcion')}</p>
+                    
+                    <div className="mt-auto flex items-end justify-between">
+                      <div>
+                        <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Precio</p>
+                        <span className="text-lg font-black text-slate-900 dark:text-white">{formatPrice(prod.precio)}</span>
+                      </div>
+                      <button 
+                        onClick={(e) => {
+                          e.preventDefault(); // prevenir navegacion al Link
+                          agregarAlCarrito(prod);
+                        }}
+                        className="bg-primary/10 text-primary hover:bg-primary hover:text-black p-3 rounded-xl transition-all"
+                      >
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                      </button>
                     </div>
                   </div>
                 </Link>
