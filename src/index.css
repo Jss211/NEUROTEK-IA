@@ -42,7 +42,7 @@ a[role="button"]:hover:not(:disabled),
 input[type="submit"]:hover:not(:disabled),
 input[type="button"]:hover:not(:disabled),
 .btn:hover:not(:disabled) {
-  transform: translateY(-2px) scale(1.02);
+  transform: translateY(-2px);
 }
 
 button:active:not(:disabled):not([data-no-hover]),
@@ -50,5 +50,5 @@ a[role="button"]:active:not(:disabled),
 input[type="submit"]:active:not(:disabled),
 input[type="button"]:active:not(:disabled),
 .btn:active:not(:disabled) {
-  transform: translateY(0) scale(0.98);
+  transform: translateY(0);
 }
