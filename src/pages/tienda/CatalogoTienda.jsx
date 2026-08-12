@@ -12,6 +12,7 @@ export default function CatalogoTienda() {
   const [loading, setLoading] = useState(true);
   const [busqueda, setBusqueda] = useState('');
   const [categoriaActiva, setCategoriaActiva] = useState('Todos');
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   // Fetch initial products
   useEffect(() => {
@@ -103,18 +104,13 @@ export default function CatalogoTienda() {
 
         {/* Header del Catálogo */}
         <div className="flex flex-col gap-6 mb-8">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
-            <div>
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
-                Catálogo de Productos
-              </h1>
-              <p className="text-slate-500 dark:text-slate-400 text-sm">
-                {loading
-                  ? 'Cargando productos...'
-                  : `Mostrando ${productosFiltrados.length} de ${productos.length} productos`}
-              </p>
-            </div>
-
+          <div className="mb-8 md:mb-10 text-center">
+            <h1 className="text-3xl md:text-5xl font-black text-slate-900 dark:text-white mb-2 md:mb-4">
+              Catálogo de Productos
+            </h1>
+            <p className="text-slate-500 dark:text-slate-400 text-sm md:text-base">
+              Mostrando {productosFiltrados.length} de {productos.length} productos
+            </p>
           </div>
 
           <div className="flex flex-col md:flex-row gap-4 items-center w-full mt-4">
@@ -138,28 +134,37 @@ export default function CatalogoTienda() {
                 placeholder="Buscar por nombre o marca..."
                 value={busqueda}
                 onChange={(e) => setBusqueda(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 rounded-xl border border-slate-200 dark:border-white/5 bg-white dark:bg-[#1a1d2e] text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors text-sm"
+                className="w-full pl-12 pr-4 py-3.5 rounded-xl border border-slate-200 dark:border-white/5 bg-white dark:bg-[#1a1d2e] text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors text-sm"
               />
             </div>
 
-            {/* Select de categoría */}
+            {/* Custom Select de categoría */}
             <div className="w-full md:w-64 shrink-0 relative">
-              <select
-                value={categoriaActiva}
-                onChange={(e) => setCategoriaActiva(e.target.value)}
-                className="w-full appearance-none bg-white dark:bg-[#1a1d2e] border border-slate-200 dark:border-white/5 text-slate-900 dark:text-white px-4 py-3 pr-10 rounded-xl focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition cursor-pointer text-sm font-medium"
+              <button
+                onClick={() => setDropdownOpen(o => !o)}
+                className="w-full flex items-center justify-between bg-white dark:bg-[#1a1d2e] border border-slate-200 dark:border-white/5 rounded-xl px-4 py-3.5 text-sm text-slate-900 dark:text-white min-w-[180px] font-medium"
               >
-                {categorias.map(cat => (
-                  <option key={cat} value={cat}>
-                    {cat === 'Todos' ? 'Todas las categorías' : cat}
-                  </option>
-                ))}
-              </select>
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-400">
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                <span>{categoriaActiva === 'Todos' ? 'Todas las categorías' : categoriaActiva}</span>
+                <svg className={`w-4 h-4 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
-              </div>
+              </button>
+              {dropdownOpen && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setDropdownOpen(false)} />
+                  <div className="absolute right-0 mt-2 z-20 w-full bg-white dark:bg-[#1a1d2e] border border-slate-200 dark:border-white/5 rounded-xl overflow-hidden shadow-xl max-h-64 overflow-y-auto">
+                    {categorias.map(cat => (
+                      <button
+                        key={cat}
+                        onClick={() => { setCategoriaActiva(cat); setDropdownOpen(false); }}
+                        className={`w-full text-left px-4 py-3 text-sm transition hover:bg-primary/10 hover:text-primary ${categoriaActiva === cat ? 'text-primary font-semibold' : 'text-slate-600 dark:text-gray-300'}`}
+                      >
+                        {cat === 'Todos' ? 'Todas las categorías' : cat}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
