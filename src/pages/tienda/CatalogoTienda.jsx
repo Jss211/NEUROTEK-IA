@@ -117,45 +117,50 @@ export default function CatalogoTienda() {
 
           </div>
 
-          {/* Filtros de categoría */}
-          <div className="flex gap-2 overflow-x-auto pb-2 w-full scrollbar-hide">
-            {categorias.map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setCategoriaActiva(cat)}
-                className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-200 ${
-                  categoriaActiva === cat
-                    ? 'bg-primary text-white shadow-md shadow-primary/30'
-                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-                }`}
+          <div className="flex flex-col md:flex-row gap-4 items-center w-full mt-4">
+            {/* Barra de búsqueda */}
+            <div className="relative w-full flex-grow">
+              <svg
+                className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
               >
-                {cat}
-              </button>
-            ))}
-          </div>
-
-          {/* Barra de búsqueda */}
-          <div className="relative w-full max-w-md">
-            <svg
-              className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </svg>
+              <input
+                type="text"
+                placeholder="Buscar por nombre o marca..."
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+                className="w-full pl-12 pr-4 py-3 rounded-xl border border-slate-200 dark:border-white/5 bg-white dark:bg-[#1a1d2e] text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors text-sm"
               />
-            </svg>
-            <input
-              type="text"
-              placeholder="Buscar productos..."
-              value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors text-sm"
-            />
+            </div>
+
+            {/* Select de categoría */}
+            <div className="w-full md:w-64 shrink-0 relative">
+              <select
+                value={categoriaActiva}
+                onChange={(e) => setCategoriaActiva(e.target.value)}
+                className="w-full appearance-none bg-white dark:bg-[#1a1d2e] border border-slate-200 dark:border-white/5 text-slate-900 dark:text-white px-4 py-3 pr-10 rounded-xl focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition cursor-pointer text-sm font-medium"
+              >
+                {categorias.map(cat => (
+                  <option key={cat} value={cat}>
+                    {cat === 'Todos' ? 'Todas las categorías' : cat}
+                  </option>
+                ))}
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-400">
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
           </div>
         </div>
 
