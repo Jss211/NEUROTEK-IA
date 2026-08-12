@@ -1,4 +1,5 @@
 import TiendaLayout from '../../components/tienda/TiendaLayout';
+import { GradientText } from '../../components/ui/gradient-text-fill';
 import { useState } from 'react';
 
 export default function SoporteTienda() {
@@ -44,9 +45,9 @@ export default function SoporteTienda() {
     <TiendaLayout>
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-20">
         <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-extrabold text-slate-900 dark:text-white mb-6">
+          <GradientText as="h1" className="text-4xl md:text-5xl font-extrabold mb-6 pb-2">
             Centro de Soporte
-          </h1>
+          </GradientText>
           <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
             ¿Tienes algún problema con un pedido o un equipo? Repórtalo completando el siguiente formulario y nuestro equipo te contactará directamente a tu correo electrónico.
           </p>

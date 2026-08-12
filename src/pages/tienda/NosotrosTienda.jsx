@@ -1,4 +1,5 @@
 import TiendaLayout from '../../components/tienda/TiendaLayout';
+import { GradientText } from '../../components/ui/gradient-text-fill';
 import ElegantCarousel from '../../components/ui/ElegantCarousel';
 
 export default function NosotrosTienda() {
@@ -7,9 +8,9 @@ export default function NosotrosTienda() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-20">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
           <div>
-            <h1 className="text-4xl md:text-5xl font-extrabold text-slate-900 dark:text-white mb-6 leading-tight">
+            <GradientText as="h1" className="text-4xl md:text-5xl font-extrabold mb-6 leading-tight pb-2">
               Revolucionando tu <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-purple-500">Setup</span>
-            </h1>
+            </GradientText>
             <p className="text-lg text-slate-600 dark:text-slate-400 mb-8 leading-relaxed">
               En NeuroTek Store nos apasiona la tecnología de alto rendimiento. Nacimos con la misión de brindar a profesionales y gamers los equipos más avanzados del mercado, respaldados por un servicio excepcional y una experiencia de compra premium.
             </p>

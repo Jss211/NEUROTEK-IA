@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import TiendaLayout from '../../components/tienda/TiendaLayout';
+import { GradientText } from '../../components/ui/gradient-text-fill';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useTienda } from '../../context/TiendaContext';
@@ -87,9 +88,9 @@ export default function OfertasTienda() {
     <TiendaLayout>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-20">
         <div className="text-center max-w-3xl mx-auto mb-12">
-          <h1 className="text-4xl md:text-5xl font-extrabold text-slate-900 dark:text-white mb-6">
+          <GradientText as="h1" className="text-4xl md:text-5xl font-extrabold mb-6 pb-2">
             Ofertas Exclusivas
-          </h1>
+          </GradientText>
           <p className="text-lg text-slate-600 dark:text-slate-400 mb-8">
             Aprovecha nuestros descuentos especiales por tiempo limitado en componentes, periféricos y más.
           </p>

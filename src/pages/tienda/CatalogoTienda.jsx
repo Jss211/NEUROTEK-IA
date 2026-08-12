@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import TiendaLayout from '../../components/tienda/TiendaLayout';
 import { useTienda } from '../../context/TiendaContext';
 import { useConfig } from '../../context/ConfigContext';
+import { GradientText } from '../../components/ui/gradient-text-fill';
 import { supabase } from '../../lib/supabase';
 
 export default function CatalogoTienda() {
@@ -105,9 +106,9 @@ export default function CatalogoTienda() {
         {/* Header del Catálogo */}
         <div className="flex flex-col gap-6 mb-8">
           <div className="mb-8 md:mb-10 text-center">
-            <h1 className="text-3xl md:text-5xl font-black text-slate-900 dark:text-white mb-2 md:mb-4">
+            <GradientText as="h1" className="text-3xl md:text-5xl font-black mb-2 md:mb-4 pb-2">
               Catálogo de Productos
-            </h1>
+            </GradientText>
             <p className="text-slate-500 dark:text-slate-400 text-sm md:text-base">
               Mostrando {productosFiltrados.length} de {productos.length} productos
             </p>

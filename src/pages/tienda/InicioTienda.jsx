@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { GradientText } from '../../components/ui/gradient-text-fill';
 import TiendaLayout from '../../components/tienda/TiendaLayout';
 import { supabase } from '../../lib/supabase';
 import { useTienda } from '../../context/TiendaContext';
@@ -82,8 +83,9 @@ export default function InicioTienda() {
           </div>
 
           <div className="relative z-10 px-8 md:px-16 py-12 max-w-3xl">
-            <h1 className="text-4xl md:text-6xl font-extrabold text-slate-900 dark:text-white mb-6 leading-tight tracking-tight h-[120px] md:h-auto">
+            <GradientText as="h1" className="text-4xl md:text-6xl font-extrabold mb-6 leading-tight tracking-tight h-[120px] md:h-auto pb-4">
               Bienvenido{user ? `, ${userName}` : ' a NeuroTek'}. <br/>
+            </GradientText>
               <TypewriterText
                 text={[
                   "Eleva tu Setup",
