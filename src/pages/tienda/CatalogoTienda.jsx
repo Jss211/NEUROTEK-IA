@@ -106,7 +106,7 @@ export default function CatalogoTienda() {
         {/* Header del Catálogo */}
         <div className="flex flex-col gap-6 mb-8">
           <div className="mb-8 md:mb-10 text-center">
-            <GradientText as="h1" className="text-3xl md:text-5xl font-black mb-2 md:mb-4 pb-2">
+            <GradientText as="h1" className="text-3xl md:text-5xl font-black mb-2 md:mb-4 pb-2 pt-4 md:pt-6">
               Catálogo de Productos
             </GradientText>
             <p className="text-slate-500 dark:text-slate-400 text-sm md:text-base">
