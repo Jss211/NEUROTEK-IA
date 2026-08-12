@@ -172,28 +172,6 @@ export default function InicioTienda() {
         </div>
         </div>
 
-        {/* TESTIMONIOS (CLIENTS SECTION) */}
-        <div className="py-8">
-          <ClientsSection
-            tagLabel="Clientes Reales"
-            title="Lo que dicen de nosotros"
-            description="Las reseñas de nuestros compradores en tiempo real. Únete a la familia NeuroTek y eleva tu setup."
-            stats={statsData}
-            testimonials={testimonios}
-            primaryActionLabel="Ver Catálogo"
-            secondaryActionLabel="Explorar Ofertas"
-            onPrimaryClick={(e) => {
-              e.preventDefault();
-              window.location.href = '/tienda/catalogo';
-            }}
-            onSecondaryClick={(e) => {
-              e.preventDefault();
-              window.location.href = '/tienda/ofertas';
-            }}
-            className="rounded-3xl border border-slate-200 dark:border-white/5"
-          />
-        </div>
-
         {/* ESCAPARATE DE PRODUCTOS */}
         <div className="pt-8">
           <div className="flex flex-col md:flex-row justify-between items-end mb-8 border-b border-slate-200 dark:border-slate-800 pb-4">
