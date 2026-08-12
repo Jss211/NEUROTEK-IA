@@ -535,6 +535,7 @@ export default function Productos() {
                       <input type="number" step="0.01" required value={form.precio} onChange={e => setForm({ ...form, precio: e.target.value })}
                         className="w-full bg-white dark:bg-[#13151f] border border-black/10 dark:border-white/10 rounded-xl px-4 py-3 pl-10 text-sm text-slate-900 dark:text-white outline-none focus:border-primary transition" />
                     </div>
+                    <span className="text-xs text-slate-500 mt-1 block">Ej: 3800 (no uses puntos ni comas para miles)</span>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-2">{t('admin.prod.form.stock_avail')}</label>
@@ -563,6 +564,7 @@ export default function Productos() {
                         <input type="number" step="0.01" required={form.en_oferta} value={form.precio_oferta} onChange={e => setForm({ ...form, precio_oferta: e.target.value })}
                           className="w-full bg-primary/5 dark:bg-primary/10 border border-primary/30 rounded-xl px-4 py-3 pl-10 text-sm text-slate-900 dark:text-white outline-none focus:border-primary transition" placeholder={t('admin.prod.form.placeholder_price')} />
                       </div>
+                      <span className="text-xs text-slate-500 mt-1 block">Ej: 3800 (no uses puntos ni comas para miles)</span>
                     </div>
                   )}
                 </div>

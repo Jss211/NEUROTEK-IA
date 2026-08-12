@@ -9,18 +9,36 @@ export default function OfertasTienda() {
   const [loading, setLoading] = useState(true);
   const { agregarAlCarrito } = useTienda();
 
-  // Fecha límite harcodeada para el 24 de Julio (puede cambiarse o venir de DB luego)
-  const TARGET_DATE = new Date('2026-07-24T23:59:59').getTime();
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
   const [isExpired, setIsExpired] = useState(false);
+  const [targetDate, setTargetDate] = useState(null);
 
   useEffect(() => {
     cargarOfertas();
+    cargarConfiguracion();
+  }, []);
+
+  async function cargarConfiguracion() {
+    try {
+      const { data, error } = await supabase.from('tienda_config').select('ofertas_end_date').single();
+      if (data && data.ofertas_end_date) {
+        setTargetDate(new Date(data.ofertas_end_date).getTime());
+      } else {
+        // Fallback en caso no exista la tabla aún
+        setTargetDate(new Date('2026-12-31T23:59:59').getTime());
+      }
+    } catch (e) {
+      setTargetDate(new Date('2026-12-31T23:59:59').getTime());
+    }
+  }
+
+  useEffect(() => {
+    if (!targetDate) return;
 
     // Lógica del Cronómetro
     const timer = setInterval(() => {
       const now = new Date().getTime();
-      const distance = TARGET_DATE - now;
+      const distance = targetDate - now;
 
       if (distance < 0) {
         clearInterval(timer);
@@ -36,7 +54,7 @@ export default function OfertasTienda() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, []);
+  }, [targetDate]);
 
   async function cargarOfertas() {
     setLoading(true);

@@ -72,6 +72,9 @@ export default function Configuracion() {
   // IP Guide State
   const [sessionInfo, setSessionInfo] = useState(null);
 
+  // Tienda Config State
+  const [ofertasEndDate, setOfertasEndDate] = useState('');
+
   useEffect(() => {
     const fetchSession = async () => {
       try {
@@ -90,6 +93,35 @@ export default function Configuracion() {
     };
     fetchSession();
   }, []);
+
+  useEffect(() => {
+    const fetchTiendaConfig = async () => {
+      try {
+        const { data, error } = await supabase.from('tienda_config').select('ofertas_end_date').single();
+        if (data && data.ofertas_end_date) {
+          // Formatear para el input datetime-local (YYYY-MM-DDThh:mm)
+          const date = new Date(data.ofertas_end_date);
+          const formatted = date.toISOString().slice(0, 16);
+          setOfertasEndDate(formatted);
+        }
+      } catch (e) {
+        console.error("Error al cargar config de tienda", e);
+      }
+    };
+    fetchTiendaConfig();
+  }, []);
+
+  const handleGuardarTienda = async () => {
+    setToast({ message: 'Guardando configuración de tienda...', type: 'warning' });
+    try {
+      const dateToSave = new Date(ofertasEndDate).toISOString();
+      const { error } = await supabase.from('tienda_config').upsert({ id: 1, ofertas_end_date: dateToSave });
+      if (error) throw error;
+      setToast({ message: 'Configuración guardada exitosamente.', type: 'success' });
+    } catch (e) {
+      setToast({ message: 'Error al guardar (Asegúrate de haber creado la tabla tienda_config en Supabase)', type: 'error' });
+    }
+  };
 
   // Keep form in sync if user updates
   useEffect(() => {
@@ -329,6 +361,16 @@ export default function Configuracion() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
             </svg>
             {t('config.tab.appearance')}
+          </button>
+          
+          <button 
+            onClick={() => handleTabChange('tienda')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'tienda' ? 'bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-white' : 'text-slate-400 dark:text-slate-500 dark:text-slate-400 hover:text-slate-200'}`}
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+            </svg>
+            Tienda
           </button>
         </div>
 
@@ -692,6 +734,37 @@ export default function Configuracion() {
                     {t('admin.conf.privacy.delete')}
                   </button>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Pestaña: Tienda */}
+          {activeTab === 'tienda' && (
+            <div className="p-8">
+              <div className="mb-8">
+                <h2 className="text-xl font-bold mb-1">Configuración de la Tienda</h2>
+                <p className="text-slate-400 dark:text-slate-500 text-sm">Gestiona variables globales de tu tienda como las fechas de ofertas.</p>
+              </div>
+
+              <div className="bg-slate-100 dark:bg-slate-800/30 border border-slate-200 dark:border-slate-700/50 rounded-lg p-6">
+                <div className="mb-6">
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Temporada de Ofertas</h3>
+                  <p className="text-sm text-slate-500 mb-4">Define hasta cuándo dura el cronómetro de la sección de Ofertas Exclusivas.</p>
+                  
+                  <label className="block text-sm font-medium text-slate-900 dark:text-white mb-2">Fecha y Hora de Fin</label>
+                  <input 
+                    type="datetime-local" 
+                    className="w-full md:w-1/2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md px-4 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+                    value={ofertasEndDate}
+                    onChange={(e) => setOfertasEndDate(e.target.value)}
+                  />
+                </div>
+                <button 
+                  onClick={handleGuardarTienda}
+                  className="bg-primary hover:bg-primary/80 text-slate-900 dark:text-white px-6 py-2.5 rounded-md text-sm font-bold transition-colors shadow-lg shadow-primary/20 mt-4"
+                >
+                  Guardar Configuración
+                </button>
               </div>
             </div>
           )}
