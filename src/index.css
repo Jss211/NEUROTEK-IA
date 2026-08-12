@@ -32,6 +32,9 @@ input[type="button"],
               color 0.2s ease,
               border-color 0.2s ease,
               opacity 0.2s ease;
+  backface-visibility: hidden;
+  -webkit-font-smoothing: subpixel-antialiased;
+  outline: 1px solid transparent;
 }
 
 button:hover:not(:disabled):not([data-no-hover]),
