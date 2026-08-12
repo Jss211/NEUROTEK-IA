@@ -24,7 +24,7 @@ export function GradientText({
         className
       )}
       style={{
-        backgroundImage: \`linear-gradient(90deg, \${colors})\`,
+        backgroundImage: `linear-gradient(90deg, ${colors})`,
         backgroundSize: "300% 300%",
         animation: "animated-gradient-text 8s ease infinite",
         ...style

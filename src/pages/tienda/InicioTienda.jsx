@@ -100,7 +100,6 @@ export default function InicioTienda() {
                 loop={true}
                 className="text-primary drop-shadow-[0_0_5px_rgba(0,243,255,0.4)] inline-block mt-2"
               />
-            </h1>
             
             <p className="text-lg md:text-xl text-slate-600 dark:text-slate-300 mb-10 max-w-2xl font-light">
                 {t('home.hero.subtitle')}
