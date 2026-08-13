@@ -95,7 +95,7 @@ export default function Ordenes() {
   const pendientes = ordenes.filter(o => o.estado === 'Pendiente').length
 
   const cambiarEstado = async (id, nuevoEstado) => {
-    if (user?.email === 'demo@neurotek.com') {
+    if (user?.email === 'invitado@neurotek.com') {
       window.alert('Acción deshabilitada en modo Demo (Solo Lectura).')
       return
     }

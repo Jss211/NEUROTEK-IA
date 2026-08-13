@@ -86,7 +86,7 @@ export default function Inventario() {
   }
 
   const handleActualizarStock = async (id) => {
-    if (user?.email === 'demo@neurotek.com') {
+    if (user?.email === 'invitado@neurotek.com') {
       window.alert('Acción deshabilitada en modo Demo (Solo Lectura).')
       return
     }

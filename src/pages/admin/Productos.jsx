@@ -107,7 +107,7 @@ export default function Productos() {
   const handleGuardar = async (e) => {
     e.preventDefault()
     setError('')
-    if (user?.email === 'demo@neurotek.com') {
+    if (user?.email === 'invitado@neurotek.com') {
       setError('Acción deshabilitada en modo Demo (Solo Lectura).')
       return
     }
@@ -151,7 +151,7 @@ export default function Productos() {
   }
 
   const handleEliminar = async (id) => {
-    if (user?.email === 'demo@neurotek.com') {
+    if (user?.email === 'invitado@neurotek.com') {
       window.alert('Acción deshabilitada en modo Demo (Solo Lectura).')
       return
     }
@@ -162,7 +162,7 @@ export default function Productos() {
   }
 
   const toggleActivo = async (id, activo) => {
-    if (user?.email === 'demo@neurotek.com') {
+    if (user?.email === 'invitado@neurotek.com') {
       window.alert('Acción deshabilitada en modo Demo (Solo Lectura).')
       return
     }

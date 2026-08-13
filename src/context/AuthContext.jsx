@@ -18,8 +18,8 @@ export function AuthProvider({ children }) {
     // Usa el rol real de la base de datos, o 'cliente' por defecto
     currentUser.role = perfil?.rol || 'cliente'
     
-    // Fuerza el rol admin para este correo de pruebas/portafolio
-    if (currentUser.email === 'admin@neurotek.com') {
+    // Fuerza el rol admin para correos especiales de pruebas/portafolio
+    if (currentUser.email === 'admin@neurotek.com' || currentUser.email === 'invitado@neurotek.com') {
       currentUser.role = 'admin'
     }
     

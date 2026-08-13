@@ -64,7 +64,7 @@ export default function Equipo() {
 
   const handleInvite = (e) => {
     e.preventDefault();
-    if (user?.email === 'demo@neurotek.com') {
+    if (user?.email === 'invitado@neurotek.com') {
       setToast({ message: t('admin.team.toast.demo'), type: 'error' });
       return;
     }

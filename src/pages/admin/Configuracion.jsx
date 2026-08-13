@@ -153,7 +153,7 @@ export default function Configuracion() {
   };
 
   const handleGuardarCambios = async () => {
-    if (user?.email === 'demo@neurotek.com') {
+    if (user?.email === 'invitado@neurotek.com') {
       setToast({ message: t('admin.conf.toast.demo'), type: 'error' });
       return;
     }
