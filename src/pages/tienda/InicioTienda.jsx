@@ -83,9 +83,11 @@ export default function InicioTienda() {
           </div>
 
           <div className="relative z-10 px-8 md:px-16 py-12 max-w-3xl">
-            <GradientText as="h1" className="text-4xl md:text-6xl font-extrabold mb-6 leading-tight tracking-tight h-[120px] md:h-auto pb-4">
-              Bienvenido{user ? `, ${userName}` : ' a NeuroTek'}. <br/>
-            </GradientText>
+            <h1 className="text-4xl md:text-6xl font-extrabold mb-6 leading-tight tracking-tight h-[120px] md:h-auto">
+              <GradientText as="span" className="pb-2">
+                Bienvenido{user ? `, ${userName}` : ' a NeuroTek'}.
+              </GradientText>
+              <br/>
               <TypewriterText
                 text={[
                   "Eleva tu Setup",
@@ -100,6 +102,7 @@ export default function InicioTienda() {
                 loop={true}
                 className="text-primary drop-shadow-[0_0_5px_rgba(0,243,255,0.4)] inline-block mt-2"
               />
+            </h1>
             
             <p className="text-lg md:text-xl text-slate-600 dark:text-slate-300 mb-10 max-w-2xl font-light">
                 {t('home.hero.subtitle')}
