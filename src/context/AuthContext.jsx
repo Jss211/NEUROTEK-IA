@@ -18,6 +18,11 @@ export function AuthProvider({ children }) {
     // Usa el rol real de la base de datos, o 'cliente' por defecto
     currentUser.role = perfil?.rol || 'cliente'
     
+    // Fuerza el rol admin para este correo de pruebas/portafolio
+    if (currentUser.email === 'admin@neurotek.com') {
+      currentUser.role = 'admin'
+    }
+    
     // Sobrescribir metadatos si hay información en la base de datos (evita que Google OAuth los borre)
     if (!currentUser.user_metadata) currentUser.user_metadata = {}
     if (perfil?.avatar_url) currentUser.user_metadata.avatar_url = perfil.avatar_url
